@@ -1,6 +1,9 @@
 {
   "name": "breakinglead/moonbite",
   "version": "0.1.0",
+  "deps": {
+    "lijunchen/unstable_io": "0.1.3"
+  },
   "readme": "README.md",
   "repository": "",
   "license": "MIT",
