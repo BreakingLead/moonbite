@@ -1,0 +1,6 @@
+{
+  "is-main": true,
+  "import": [
+    "shatteredlead/moonbite/lib"
+  ]
+}
