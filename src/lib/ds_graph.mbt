@@ -12,6 +12,7 @@ pub fn Graph::new[Node, Edge]() -> Graph[Node, Edge] {
 //   self.nodes.push(node)
 //   self
 // }
+// 试试就逝世。
 
 pub fn add_node[Node, Edge](self : Graph[Node, Edge], node : Node) -> Unit {
   self.nodes.push(node)

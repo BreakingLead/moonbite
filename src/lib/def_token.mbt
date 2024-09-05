@@ -1,0 +1,35 @@
+enum Token {
+  TRUE
+  FALSE
+  UNIT
+  BOOL
+  INT
+  DOUBLE
+  ARRAY
+  NOT
+  IF
+  ELSE
+  FN
+  LET
+  NUMBER(@strconv.Number)
+  IDENTIFIER(String)
+  DOT
+  ADD
+  SUB
+  MUL
+  DIV
+  ASSIGN
+  EQ
+  LE
+  LPAREN
+  RPAREN
+  LBRACKET
+  RBRACKET
+  LCURLYBRACKET
+  RCURLYBRACKET
+  ARROW
+  COLON
+  SEMICOLON
+  COMMA
+  WS
+}

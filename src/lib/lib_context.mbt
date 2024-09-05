@@ -1,6 +1,7 @@
 pub struct Ctx {
   // args : Args
   code : String
+  tokens : Array[Token]?
   // ast_tree : AstTree
   // cfg_graph : CfgGraph
   // symtab : SymTab
@@ -18,8 +19,8 @@ pub struct Ctx {
   // loop_tree : LoopTree
 }
 
-pub fn new(code : String) -> Ctx {
-  { code, }
+pub fn Ctx::new(code : String) -> Ctx {
+  { code, tokens: None }
 }
 
 pub fn finish(self : Ctx) -> String {
