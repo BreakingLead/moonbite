@@ -1,9 +1,0 @@
-{
-    "import": [
-        "breakinglead/moonbite/lex",
-        {
-            "path": "breakinglead/moonbite",
-            "alias": "types"
-        }
-    ]
-}

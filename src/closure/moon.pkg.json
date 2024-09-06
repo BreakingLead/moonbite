@@ -1,10 +1,7 @@
 {
   "import": [
-    {
-      "path": "breakinglead/moonbite",
-      "alias": "types"
-    },
     "breakinglead/moonbite/knf",
+    "breakinglead/moonbite/types",
     "breakinglead/moonbite/util"
   ]
 }

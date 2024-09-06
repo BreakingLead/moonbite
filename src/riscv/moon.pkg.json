@@ -1,10 +1,7 @@
 {
   "import": [
     "breakinglead/moonbite/closure",
-    {
-      "path": "breakinglead/moonbite",
-      "alias": "typing"
-    },
+    "breakinglead/moonbite/types",
     "breakinglead/moonbite/util",
     "lijunchen/unstable_io/env"
   ]

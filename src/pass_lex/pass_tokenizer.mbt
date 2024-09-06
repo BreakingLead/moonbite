@@ -134,49 +134,49 @@ test "split whitespaces" {
   assert_eq!(a, ["hello", "world", "why", "it", "is", "so::messy"])
 }
 
-pub fn tokenize(ctx : Ctx) -> Ctx {
+pub fn tokenize(ctx : @moonbite.Ctx) -> @moonbite.Ctx {
   let code = ctx.code
   let strings = split_whitespaces_easier_version(code)
   let tokens = strings.map(
     fn(i) {
       match i {
-        "let" => Token::LET
-        "fn" => Token::FN
-        "if" => Token::IF
-        "else" => Token::ELSE
-        "true" => Token::TRUE
-        "false" => Token::FALSE
-        "unit" => Token::UNIT
-        "bool" => Token::BOOL
-        "int" => Token::INT
-        "double" => Token::DOUBLE
-        "array" => Token::ARRAY
-        "not" => Token::NOT
-        "->" => Token::ARROW
-        ":" => Token::COLON
-        ";" => Token::SEMICOLON
-        "," => Token::COMMA
-        "." => Token::DOT
-        "+" => Token::ADD
-        "-" => Token::SUB
-        "*" => Token::MUL
-        "/" => Token::DIV
-        "=" => Token::ASSIGN
-        "==" => Token::EQ
-        "<=" => Token::LE
-        "(" => Token::LPAREN
-        ")" => Token::RPAREN
-        "[" => Token::LBRACKET
-        "]" => Token::RBRACKET
-        "{" => Token::LCURLYBRACKET
-        "}" => Token::RCURLYBRACKET
+        "let" => @types.Token::LET
+        "fn" => @types.Token::FN
+        "if" => @types.Token::IF
+        "else" => @types.Token::ELSE
+        "true" => @types.Token::TRUE
+        "false" => @types.Token::FALSE
+        "unit" => @types.Token::UNIT
+        "bool" => @types.Token::BOOL
+        "int" => @types.Token::INT
+        "double" => @types.Token::DOUBLE
+        "array" => @types.Token::ARRAY
+        "not" => @types.Token::NOT
+        "->" => @types.Token::ARROW
+        ":" => @types.Token::COLON
+        ";" => @types.Token::SEMICOLON
+        "," => @types.Token::COMMA
+        "." => @types.Token::DOT
+        "+" => @types.Token::ADD
+        "-" => @types.Token::SUB
+        "*" => @types.Token::MUL
+        "/" => @types.Token::DIV
+        "=" => @types.Token::ASSIGN
+        "==" => @types.Token::EQ
+        "<=" => @types.Token::LE
+        "(" => @types.Token::LPAREN
+        ")" => @types.Token::RPAREN
+        "[" => @types.Token::LBRACKET
+        "]" => @types.Token::RBRACKET
+        "{" => @types.Token::LCURLYBRACKET
+        "}" => @types.Token::RCURLYBRACKET
         // s =>{
         //   // identifier
         //   // [a-zA-Z_][a-zA-Z0-9_]*;
         //   // if s.iter().all(fn(c) { is_alphabetic(c) || is_numeric(c) }) &&
         //   //   s.iter().any(is_numeric) &&
         //   //   is_alphabetic(s.iter().last().unwrap()) {
-        //   //   Token::IDENTIFIER(s)
+        //   //   @types.Token::IDENTIFIER(s)
         //   }
         // }
         t =>
@@ -185,9 +185,9 @@ pub fn tokenize(ctx : Ctx) -> Ctx {
               t.iter().any(is_numeric) &&
               is_alphabetic(t.iter().last().unwrap()),
             ) {
-            Token::IDENTIFIER(t)
+            @types.Token::IDENTIFIER(t)
           } else {
-            Token::NUMBER(t)
+            @types.Token::NUMBER(t)
           }
       }
     },

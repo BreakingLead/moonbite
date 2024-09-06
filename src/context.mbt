@@ -1,7 +1,7 @@
 pub struct Ctx {
   // args : Args
   code : String
-  tokens : Array[Token]?
+  tokens : Array[@types.Token]?
   // ast_tree : AstTree
   // cfg_graph : CfgGraph
   // symtab : SymTab

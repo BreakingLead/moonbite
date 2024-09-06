@@ -1,8 +1,0 @@
-{
-  "is-main": true,
-  "import": [
-    "breakinglead/moonbite/lib",
-    "lijunchen/unstable_io/io",
-    "lijunchen/unstable_io/fs"
-  ]
-}

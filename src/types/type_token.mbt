@@ -1,4 +1,4 @@
-enum Token {
+pub enum Token {
   TRUE
   FALSE
   UNIT

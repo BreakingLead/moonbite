@@ -1,14 +1,11 @@
 {
   "import": [
-    {
-      "path": "breakinglead/moonbite",
-      "alias": "types"
-    },
-    "breakinglead/moonbite/util"
+    "breakinglead/moonbite/util",
+    "breakinglead/moonbite/types"
   ],
   "test-import": [
-    "breakinglead/moonbite/parser",
-    "breakinglead/moonbite/lex",
+    "breakinglead/moonbite/pass_parser",
+    "breakinglead/moonbite/pass_lex",
     "breakinglead/moonbite/typing"
   ]
 }
