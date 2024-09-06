@@ -24,5 +24,10 @@ pub fn Ctx::new(code : String) -> Ctx {
 }
 
 pub fn finish(self : Ctx) -> String {
-  self.code
+  let b = Buffer::new()
+  for i in self.tokens.unwrap() {
+    b.write_string(i.to_string())
+    b.write_char('\n')
+  }
+  b.to_string()
 }

@@ -1,3 +1,9 @@
 fn main {
-    
+    let a = 1
+    let b = 2
+    if a + b = 3 {
+        print("a + b is equal to 3")
+    } else {
+        print("a + b is not equal to 3")
+    } 
 }

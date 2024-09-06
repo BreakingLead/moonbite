@@ -11,7 +11,7 @@ enum Token {
   ELSE
   FN
   LET
-  NUMBER(@strconv.Number)
+  NUMBER(String)
   IDENTIFIER(String)
   DOT
   ADD
@@ -32,4 +32,4 @@ enum Token {
   SEMICOLON
   COMMA
   WS
-}
+} derive(Show)
