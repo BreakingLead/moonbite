@@ -1,15 +1,15 @@
 {
     "import": [
-        "moonbitlang/minimbt/knf",
+        "breakinglead/moonbite/knf",
         {
-            "path": "moonbitlang/minimbt",
+            "path": "breakinglead/moonbite",
             "alias": "types"
         },
-        "moonbitlang/minimbt/util"
+        "breakinglead/moonbite/util"
     ],
     "test-import": [
-        "moonbitlang/minimbt/parser",
-        "moonbitlang/minimbt/lex",
-        "moonbitlang/minimbt/typing"
+        "breakinglead/moonbite/parser",
+        "breakinglead/moonbite/lex",
+        "breakinglead/moonbite/typing"
     ]
 }

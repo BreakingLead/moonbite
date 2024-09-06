@@ -1,8 +1,8 @@
 {
     "import": [
-        "moonbitlang/minimbt/lex",
+        "breakinglead/moonbite/lex",
         {
-            "path": "moonbitlang/minimbt",
+            "path": "breakinglead/moonbite",
             "alias": "types"
         }
     ]

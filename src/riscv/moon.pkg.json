@@ -1,11 +1,11 @@
 {
   "import": [
-    "moonbitlang/minimbt/closure",
+    "breakinglead/moonbite/closure",
     {
-      "path": "moonbitlang/minimbt",
+      "path": "breakinglead/moonbite",
       "alias": "typing"
     },
-    "moonbitlang/minimbt/util",
+    "breakinglead/moonbite/util",
     "lijunchen/unstable_io/env"
   ]
 }

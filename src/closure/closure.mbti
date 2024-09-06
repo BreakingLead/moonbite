@@ -1,7 +1,7 @@
-package moonbitlang/minimbt/closure
+package breakinglead/moonbite/closure
 
-alias @moonbitlang/minimbt as @minimbt
-alias @moonbitlang/minimbt/knf as @knf
+alias @breakinglead/moonbite as @minimbt
+alias @breakinglead/moonbite/knf as @knf
 
 // Values
 fn knf_program_to_closure(@knf.Knf, Map[String, @minimbt.Type]) -> Program

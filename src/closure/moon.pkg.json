@@ -1,10 +1,10 @@
 {
   "import": [
     {
-      "path": "moonbitlang/minimbt",
+      "path": "breakinglead/moonbite",
       "alias": "types"
     },
-    "moonbitlang/minimbt/knf",
-    "moonbitlang/minimbt/util"
+    "breakinglead/moonbite/knf",
+    "breakinglead/moonbite/util"
   ]
 }

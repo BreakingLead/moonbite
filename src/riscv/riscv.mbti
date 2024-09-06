@@ -1,4 +1,4 @@
-package moonbitlang/minimbt/riscv
+package breakinglead/moonbite/riscv
 
 // Values
 fn asm_stringify(AssemblyFunction) -> String

@@ -1,8 +1,8 @@
-package moonbitlang/minimbt/knf_eval
+package breakinglead/moonbite/knf_eval
 
 alias @moonbitlang/core/immut/hashmap as @hashmap
-alias @moonbitlang/minimbt as @minimbt
-alias @moonbitlang/minimbt/knf as @knf
+alias @breakinglead/moonbite as @minimbt
+alias @breakinglead/moonbite/knf as @knf
 
 // Values
 

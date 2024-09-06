@@ -4,18 +4,18 @@
     "lijunchen/unstable_io/env",
     "Yoorkin/ArgParser",
     "lijunchen/unstable_io/fs",
-    "moonbitlang/minimbt/parser",
-    "moonbitlang/minimbt/lex",
+    "breakinglead/moonbite/parser",
+    "breakinglead/moonbite/lex",
     {
-      "path": "moonbitlang/minimbt",
+      "path": "breakinglead/moonbite",
       "alias": "types"
     },
-    "moonbitlang/minimbt/knf",
-    "moonbitlang/minimbt/typing",
-    "moonbitlang/minimbt/knf_eval",
+    "breakinglead/moonbite/knf",
+    "breakinglead/moonbite/typing",
+    "breakinglead/moonbite/knf_eval",
     "lijunchen/unstable_io/io",
-    "moonbitlang/minimbt/closure",
-    "moonbitlang/minimbt/riscv",
-    "moonbitlang/minimbt/util"
+    "breakinglead/moonbite/closure",
+    "breakinglead/moonbite/riscv",
+    "breakinglead/moonbite/util"
   ]
 }

@@ -1,4 +1,4 @@
-package moonbitlang/minimbt/util
+package breakinglead/moonbite/util
 
 // Values
 fn die[T](String) -> T
