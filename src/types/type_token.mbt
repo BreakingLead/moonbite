@@ -11,7 +11,8 @@ pub enum Token {
   ELSE
   FN
   LET
-  NUMBER(String)
+  INT_LITERAL(Int)
+  DOUBLE_LITERAL(Double)
   IDENTIFIER(String)
   DOT
   ADD
@@ -20,7 +21,11 @@ pub enum Token {
   DIV
   ASSIGN
   EQ
+  NE // new
   LE
+  LT // new
+  GE // new
+  GT // new
   LPAREN
   RPAREN
   LBRACKET
@@ -31,5 +36,5 @@ pub enum Token {
   COLON
   SEMICOLON
   COMMA
-  WS
-} derive(Show)
+  UNKNOWN
+} derive(Show, Eq)

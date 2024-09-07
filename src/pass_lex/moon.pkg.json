@@ -1,6 +1,7 @@
 {
     "import": [
       "breakinglead/moonbite/types",
-      "breakinglead/moonbite"
+      "breakinglead/moonbite",
+      "breakinglead/moonbite/util"
     ]
 }

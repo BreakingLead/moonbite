@@ -1,5 +1,3 @@
-type StringBuf Array[Char]
-
 fn is_whitespace(c : Char) -> Bool {
   match c {
     '\n' | '\r' | '\t' | ' ' => true
@@ -62,135 +60,285 @@ fn is_numeric(c : Char) -> Bool {
   }
 }
 
-test "random input test cases" {
-  assert_false!(is_whitespace('x'))
-  assert_false!(is_whitespace('y'))
-  assert_false!(is_whitespace('z'))
-  assert_false!(is_whitespace('A'))
-  assert_false!(is_whitespace('B'))
-  assert_false!(is_whitespace('C'))
-  assert_true!(is_whitespace('\n'))
-  assert_true!(is_whitespace('\r'))
-  assert_true!(is_whitespace('\t'))
-  assert_true!(is_whitespace(' '))
-  assert_false!(is_whitespace(':'))
+struct Scanner {
+  source : String
+  mut tokens : Array[@types.Token]
+  mut start : Int
+  mut current : Int
+  mut line : Int
+  mut had_error : Bool
 }
 
-// 不知道是怎么写出来的
-// 还在修 bug
-fn split_whitespaces(code : String) -> Iter[String] {
-  let len = code.length()
-  Iter::new(
-    fn(yield) {
-      let mut start = 0
-      let mut curr_len = 0
-      while start < len {
-        if is_whitespace(code[start]) {
-          start += 1
-        } else {
-          curr_len = start
-          while not(is_whitespace(code[start + curr_len])) { // && start + curr_len < len {
-            curr_len += 1
-          } else {
-            if yield(code.substring(~start, end=start + curr_len)) == IterEnd {
-              println("yield end") // do not display anything???
-              break IterEnd
-            }
-            break IterContinue
-          }
-        }
-      } else {
-        // never
-        IterContinue
-      }
-    },
+fn Scanner::new(source : String) -> Scanner {
+  {
+    source,
+    tokens: Array::new(),
+    start: 0,
+    current: 0,
+    line: 1,
+    had_error: false,
+  }
+}
+
+fn Scanner::error(self : Scanner, message : String) -> Unit {
+  self.had_error = true
+  @util.die(
+    "At line " +
+    self.line.to_string() +
+    " |" +
+    self.source.substring(start=self.start, end=self.current) +
+    "| has error: " +
+    message,
   )
 }
 
-fn split_whitespaces_easier_version(code : String) -> Array[String] {
-  let res = Array::new()
-  let mut buf = Buffer::new()
-  let mut should_write = false
-  for i in code {
-    if is_whitespace(i) {
-      if should_write {
-        res.push(buf.to_string())
-        buf = Buffer::new()
-      }
-      should_write = false
-      continue
-    } else {
-      should_write = true
-      buf.write_char(i)
+fn Scanner::is_at_end(self : Scanner) -> Bool {
+  self.current >= self.source.length()
+}
+
+fn Scanner::peek(self : Scanner, ~distance : Int = 0) -> Char {
+  if self.is_at_end() {
+    '\u0000'
+  } else {
+    self.source[self.current + distance]
+  }
+}
+
+fn Scanner::advance(self : Scanner) -> Char {
+  self.current += 1
+  self.source[self.current - 1]
+}
+
+fn Scanner::match_char(self : Scanner, expected : Char) -> Bool {
+  if self.is_at_end() {
+    false
+  } else if self.source[self.current] != expected {
+    false
+  } else {
+    self.current += 1
+    true
+  }
+}
+
+fn Scanner::add(self : Scanner, token_type : @types.Token) -> Unit {
+  self.tokens.push(token_type)
+}
+
+fn Scanner::add_number(self : Scanner) -> Unit {
+  let mut has_dot = false
+  while is_numeric(self.peek()) {
+    self.current += 1
+  }
+  if self.peek() == '.' && is_numeric(self.peek(distance=1)) {
+    has_dot = true
+    self.current += 1 // consume the '.'
+    while is_numeric(self.peek()) {
+      self.current += 1
     }
   }
-  res
+  if has_dot {
+    let n = self.source.substring(start=self.start, end=self.current)
+    let n = @strconv.parse_double?(n).unwrap()
+    self.add(@types.Token::DOUBLE_LITERAL(n))
+  } else {
+    let n = self.source.substring(start=self.start, end=self.current)
+    let n = @strconv.parse_int?(n).unwrap()
+    self.add(@types.Token::INT_LITERAL(n))
+  }
 }
 
-test "split whitespaces" {
-  let a = split_whitespaces_easier_version(
-    "   hello   world\n why\t  it is       so::messy    ",
+fn Scanner::add_identifier(self : Scanner) -> Unit {
+  while is_alphabetic(self.peek()) {
+    self.current += 1
+  }
+  let text = self.source.substring(start=self.start, end=self.current)
+  match text {
+    "true" => self.add(@types.Token::TRUE)
+    "false" => self.add(@types.Token::FALSE)
+    "if" => self.add(@types.Token::IF)
+    "else" => self.add(@types.Token::ELSE)
+    "fn" => self.add(@types.Token::FN)
+    "let" => self.add(@types.Token::LET)
+    "Unit" => self.add(@types.Token::UNIT)
+    "Int" => self.add(@types.Token::INT)
+    "Double" => self.add(@types.Token::DOUBLE)
+    "Array" => self.add(@types.Token::ARRAY)
+    _ => self.add(@types.Token::IDENTIFIER(text))
+  }
+}
+
+fn Scanner::scan_token(self : Scanner) -> Unit {
+  let c = self.advance()
+  match c {
+    '(' => self.add(@types.Token::LPAREN)
+    ')' => self.add(@types.Token::RPAREN)
+    '[' => self.add(@types.Token::LBRACKET)
+    ']' => self.add(@types.Token::RBRACKET)
+    '{' => self.add(@types.Token::LCURLYBRACKET)
+    '}' => self.add(@types.Token::RCURLYBRACKET)
+    ':' => self.add(@types.Token::COLON)
+    ';' => self.add(@types.Token::SEMICOLON)
+    ',' => self.add(@types.Token::COMMA)
+    '.' => self.add(@types.Token::DOT)
+    '+' => self.add(@types.Token::ADD)
+    '-' =>
+      if self.match_char('>') {
+        self.add(@types.Token::ARROW)
+      } else {
+        self.add(@types.Token::SUB)
+      }
+    '*' => self.add(@types.Token::MUL)
+    '/' =>
+      if self.match_char('/') {
+        while self.peek() != '\n' && not(self.is_at_end()) {
+          self.current += 1
+        }
+      } else {
+        self.add(@types.Token::DIV)
+      }
+    '=' =>
+      if self.match_char('=') {
+        self.add(@types.Token::EQ)
+      } else {
+        self.add(@types.Token::ASSIGN)
+      }
+    '<' =>
+      if self.match_char('=') {
+        self.add(@types.Token::LE)
+      } else {
+        self.add(@types.Token::LT)
+      }
+    '>' =>
+      if self.match_char('=') {
+        self.add(@types.Token::GE)
+      } else {
+        self.add(@types.Token::GT)
+      }
+    '\n' => self.line += 1
+    '"' => self.error("String literals not supported")
+    c =>
+      if is_whitespace(c) {
+        // do nothing
+      } else if is_numeric(c) {
+        self.add_number()
+      } else if is_alphabetic(c) {
+        self.add_identifier()
+      } else {
+        self.error("Unexpected character")
+        println(c)
+      }
+  }
+}
+
+fn Scanner::scan_tokens(self : Scanner) -> Array[@types.Token] {
+  while not(self.is_at_end()) {
+    self.start = self.current
+    self.scan_token()
+  }
+  return self.tokens
+}
+
+test "tokenize double literal and integer literal" {
+  let scanner = Scanner::new("let x = 123.456; let y = 123;")
+  let tokens = scanner.scan_tokens()
+  assert_eq!(
+    tokens,
+    [
+      @types.Token::LET,
+      @types.Token::IDENTIFIER("x"),
+      @types.Token::ASSIGN,
+      @types.Token::DOUBLE_LITERAL(123.456),
+      @types.Token::SEMICOLON,
+      @types.Token::LET,
+      @types.Token::IDENTIFIER("y"),
+      @types.Token::ASSIGN,
+      @types.Token::INT_LITERAL(123),
+      @types.Token::SEMICOLON,
+    ],
   )
-  assert_eq!(a, ["hello", "world", "why", "it", "is", "so::messy"])
+}
+
+test "tokenize identifier" {
+  let scanner = Scanner::new("let aaabbb = 123; fn main() { meow();}")
+  let tokens = scanner.scan_tokens()
+  assert_eq!(
+    tokens,
+    [
+      @types.Token::LET,
+      @types.Token::IDENTIFIER("aaabbb"),
+      @types.Token::ASSIGN,
+      @types.Token::INT_LITERAL(123),
+      @types.Token::SEMICOLON,
+      @types.Token::FN,
+      @types.Token::IDENTIFIER("main"),
+      @types.Token::LPAREN,
+      @types.Token::RPAREN,
+      @types.Token::LCURLYBRACKET,
+      @types.Token::IDENTIFIER("meow"),
+      @types.Token::LPAREN,
+      @types.Token::RPAREN,
+      @types.Token::SEMICOLON,
+      @types.Token::RCURLYBRACKET,
+    ],
+  )
+}
+
+test "tokenize if-else statements" {
+  let scanner = Scanner::new("if (x > 0) { print(x); } else { print(-x); }")
+  let tokens = scanner.scan_tokens()
+  assert_eq!(
+    tokens,
+    [
+      @types.Token::IF,
+      @types.Token::LPAREN,
+      @types.Token::IDENTIFIER("x"),
+      @types.Token::GT,
+      @types.Token::INT_LITERAL(0),
+      @types.Token::RPAREN,
+      @types.Token::LCURLYBRACKET,
+      @types.Token::IDENTIFIER("print"),
+      @types.Token::LPAREN,
+      @types.Token::IDENTIFIER("x"),
+      @types.Token::RPAREN,
+      @types.Token::SEMICOLON,
+      @types.Token::RCURLYBRACKET,
+      @types.Token::ELSE,
+      @types.Token::LCURLYBRACKET,
+      @types.Token::IDENTIFIER("print"),
+      @types.Token::LPAREN,
+      @types.Token::SUB,
+      @types.Token::IDENTIFIER("x"),
+      @types.Token::RPAREN,
+      @types.Token::SEMICOLON,
+      @types.Token::RCURLYBRACKET,
+    ],
+  )
+}
+
+test "tokenize >= > <= <" {
+  let scanner = Scanner::new("if x>=0 { if y<0 {} }")
+  let tokens = scanner.scan_tokens()
+  assert_eq!(
+    tokens,
+    [
+      @types.Token::IF,
+      @types.Token::IDENTIFIER("x"),
+      @types.Token::GE,
+      @types.Token::INT_LITERAL(0),
+      @types.Token::LCURLYBRACKET,
+      @types.Token::IF,
+      @types.Token::IDENTIFIER("y"),
+      @types.Token::LT,
+      @types.Token::INT_LITERAL(0),
+      @types.Token::LCURLYBRACKET,
+      @types.Token::RCURLYBRACKET,
+      @types.Token::RCURLYBRACKET,
+    ],
+  )
 }
 
 pub fn tokenize(ctx : @moonbite.Ctx) -> @moonbite.Ctx {
-  let code = ctx.code
-  let strings = split_whitespaces_easier_version(code)
-  let tokens = strings.map(
-    fn(i) {
-      match i {
-        "let" => @types.Token::LET
-        "fn" => @types.Token::FN
-        "if" => @types.Token::IF
-        "else" => @types.Token::ELSE
-        "true" => @types.Token::TRUE
-        "false" => @types.Token::FALSE
-        "unit" => @types.Token::UNIT
-        "bool" => @types.Token::BOOL
-        "int" => @types.Token::INT
-        "double" => @types.Token::DOUBLE
-        "array" => @types.Token::ARRAY
-        "not" => @types.Token::NOT
-        "->" => @types.Token::ARROW
-        ":" => @types.Token::COLON
-        ";" => @types.Token::SEMICOLON
-        "," => @types.Token::COMMA
-        "." => @types.Token::DOT
-        "+" => @types.Token::ADD
-        "-" => @types.Token::SUB
-        "*" => @types.Token::MUL
-        "/" => @types.Token::DIV
-        "=" => @types.Token::ASSIGN
-        "==" => @types.Token::EQ
-        "<=" => @types.Token::LE
-        "(" => @types.Token::LPAREN
-        ")" => @types.Token::RPAREN
-        "[" => @types.Token::LBRACKET
-        "]" => @types.Token::RBRACKET
-        "{" => @types.Token::LCURLYBRACKET
-        "}" => @types.Token::RCURLYBRACKET
-        // s =>{
-        //   // identifier
-        //   // [a-zA-Z_][a-zA-Z0-9_]*;
-        //   // if s.iter().all(fn(c) { is_alphabetic(c) || is_numeric(c) }) &&
-        //   //   s.iter().any(is_numeric) &&
-        //   //   is_alphabetic(s.iter().last().unwrap()) {
-        //   //   @types.Token::IDENTIFIER(s)
-        //   }
-        // }
-        t =>
-          if t.iter().all(fn(c) { is_alphabetic(c) || is_numeric(c) }) &&
-            not(
-              t.iter().any(is_numeric) &&
-              is_alphabetic(t.iter().last().unwrap()),
-            ) {
-            @types.Token::IDENTIFIER(t)
-          } else {
-            @types.Token::NUMBER(t)
-          }
-      }
-    },
-  )
+  let scanner = Scanner::new(ctx.code)
+  let tokens = scanner.scan_tokens()
   { ..ctx, tokens: Some(tokens) }
 }
