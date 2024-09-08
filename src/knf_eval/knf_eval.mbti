@@ -1,8 +1,8 @@
 package breakinglead/moonbite/knf_eval
 
-alias @moonbitlang/core/immut/hashmap as @hashmap
-alias @breakinglead/moonbite as @minimbt
 alias @breakinglead/moonbite/knf as @knf
+alias @breakinglead/moonbite/types as @types
+alias @moonbitlang/core/immut/hashmap as @hashmap
 
 // Values
 
@@ -10,7 +10,7 @@ alias @breakinglead/moonbite/knf as @knf
 type KnfInterpreter
 impl KnfInterpreter {
   add_extern_fn(Self, String, (Array[Value]) -> Value) -> Unit
-  eval(Self, @hashmap.T[@minimbt.Name, Value], @knf.Knf) -> Value!Failure
+  eval(Self, @hashmap.T[@types.Name, Value], @knf.Knf) -> Value!Failure
   eval_full(Self, @knf.Knf) -> Value!Failure
   new() -> Self
 }
@@ -22,7 +22,7 @@ pub enum Value {
   Tuple(Array[Value])
   Array(Array[Value])
   ExternFn(String)
-  Closure(@knf.FuncDef, Ref[@hashmap.T[@minimbt.Name, Value]])
+  Closure(@knf.FuncDef, Ref[@hashmap.T[@types.Name, Value]])
 }
 impl Value {
   op_equal(Self, Self) -> Bool
@@ -30,9 +30,9 @@ impl Value {
 }
 
 // Type aliases
-pub typealias InterpreterLocalVars = @hashmap.T[@minimbt.Name, Value]
+pub typealias InterpreterLocalVars = @hashmap.T[@types.Name, Value]
 
-pub typealias Name = @minimbt.Name
+pub typealias Name = @types.Name
 
 // Traits
 

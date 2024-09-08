@@ -1,0 +1,44 @@
+package breakinglead/moonbite/data_structures
+
+// Values
+
+// Types and methods
+pub struct BiMap {
+  pub a_to_b : Map[A, B]
+  pub b_to_a : Map[B, A]
+}
+impl BiMap {
+  get_a_from_b[A : Hash + Eq, B : Hash + Eq](Self[A, B], B) -> A?
+  get_b_from_a[A : Hash + Eq, B : Hash + Eq](Self[A, B], A) -> B?
+  insert[A : Hash + Eq, B : Hash + Eq](Self[A, B], A, B) -> Unit
+  new[A, B]() -> Self[A, B]
+  to_string[A : Show, B : Show](Self[A, B]) -> String
+}
+
+pub struct Graph {
+  pub nodes : Array[Node]
+  pub edges : Array[Edge]
+}
+impl Graph {
+  add_node[Node, Edge](Self[Node, Edge], Node) -> Unit
+  new[Node, Edge]() -> Self[Node, Edge]
+}
+
+pub struct Node {
+  pub value : T
+  pub parent : Node[T]?
+  pub children : Array[Node[T]]
+}
+
+type Tree
+impl Tree {
+  new[T](Node[T]) -> Self[T]
+}
+
+// Type aliases
+
+// Traits
+
+// Extension Methods
+impl Show for BiMap
+

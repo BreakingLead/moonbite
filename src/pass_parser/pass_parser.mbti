@@ -1,0 +1,18 @@
+package breakinglead/moonbite/pass_parser
+
+alias @breakinglead/moonbite/types as @types
+
+// Values
+fn pass_parser(@types.Ctx) -> @types.Ctx
+
+// Types and methods
+pub type! ParseError String
+
+type Parser
+
+// Type aliases
+
+// Traits
+
+// Extension Methods
+

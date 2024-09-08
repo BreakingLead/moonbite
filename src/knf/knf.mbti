@@ -1,15 +1,15 @@
 package breakinglead/moonbite/knf
 
+alias @breakinglead/moonbite/types as @types
 alias @moonbitlang/core/immut/hashmap as @hashmap
-alias @breakinglead/moonbite as @minimbt
 
 // Values
 
 // Types and methods
 pub struct FuncDef {
-  pub name : @minimbt.Name
-  pub ty : @minimbt.Type
-  pub args : Array[Tuple[@minimbt.Name, @minimbt.Type]]
+  pub name : @types.Name
+  pub ty : @types.Type
+  pub args : Array[Tuple[@types.Name, @types.Type]]
   pub body : Knf
 }
 impl FuncDef {
@@ -21,28 +21,28 @@ pub enum Knf {
   Unit
   Int(Int)
   Double(Double)
-  Neg(@minimbt.Name)
-  Add(@minimbt.Name, @minimbt.Name)
-  Sub(@minimbt.Name, @minimbt.Name)
-  Mul(@minimbt.Name, @minimbt.Name)
-  Div(@minimbt.Name, @minimbt.Name)
-  FNeg(@minimbt.Name)
-  FAdd(@minimbt.Name, @minimbt.Name)
-  FSub(@minimbt.Name, @minimbt.Name)
-  FMul(@minimbt.Name, @minimbt.Name)
-  FDiv(@minimbt.Name, @minimbt.Name)
-  IfEq(@minimbt.Name, @minimbt.Name, Knf, Knf)
-  IfLe(@minimbt.Name, @minimbt.Name, Knf, Knf)
-  Let(Tuple[@minimbt.Name, @minimbt.Type], Knf, Knf)
-  Var(@minimbt.Name)
+  Neg(@types.Name)
+  Add(@types.Name, @types.Name)
+  Sub(@types.Name, @types.Name)
+  Mul(@types.Name, @types.Name)
+  Div(@types.Name, @types.Name)
+  FNeg(@types.Name)
+  FAdd(@types.Name, @types.Name)
+  FSub(@types.Name, @types.Name)
+  FMul(@types.Name, @types.Name)
+  FDiv(@types.Name, @types.Name)
+  IfEq(@types.Name, @types.Name, Knf, Knf)
+  IfLe(@types.Name, @types.Name, Knf, Knf)
+  Let(Tuple[@types.Name, @types.Type], Knf, Knf)
+  Var(@types.Name)
   LetRec(FuncDef, Knf)
-  Apply(@minimbt.Name, Array[@minimbt.Name])
-  Tuple(Array[@minimbt.Name])
-  LetTuple(Array[Tuple[@minimbt.Name, @minimbt.Type]], @minimbt.Name, Knf)
-  Get(@minimbt.Name, @minimbt.Name)
-  Put(@minimbt.Name, @minimbt.Name, @minimbt.Name)
-  ExternalArray(@minimbt.Name)
-  ExternalFunctionApplication(String, Array[@minimbt.Name])
+  Apply(@types.Name, Array[@types.Name])
+  Tuple(Array[@types.Name])
+  LetTuple(Array[Tuple[@types.Name, @types.Type]], @types.Name, Knf)
+  Get(@types.Name, @types.Name)
+  Put(@types.Name, @types.Name, @types.Name)
+  ExternalArray(@types.Name)
+  ExternalFunctionApplication(String, Array[@types.Name])
 }
 impl Knf {
   op_equal(Self, Self) -> Bool
@@ -52,20 +52,20 @@ impl Knf {
 
 type KnfEnv
 impl KnfEnv {
-  new(@hashmap.T[String, @minimbt.Type]) -> Self
+  new(@hashmap.T[String, @types.Type]) -> Self
   opt_pass(Self, Knf) -> Knf
-  syntax_preprocess(Self, @minimbt.Syntax) -> @minimbt.Syntax
-  to_knf(Self, @minimbt.Syntax) -> Knf
+  syntax_preprocess(Self, @types.Syntax) -> @types.Syntax
+  to_knf(Self, @types.Syntax) -> Knf
 }
 
 type PrettyKnf
 
 // Type aliases
-pub typealias LocalEnv = @hashmap.T[String, @minimbt.Type]
+pub typealias LocalEnv = @hashmap.T[String, @types.Type]
 
-pub typealias Name = @minimbt.Name
+pub typealias Name = @types.Name
 
-pub typealias Type = @minimbt.Type
+pub typealias Type = @types.Type
 
 // Traits
 

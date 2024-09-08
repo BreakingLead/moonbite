@@ -1,15 +1,15 @@
 package breakinglead/moonbite/closure
 
-alias @breakinglead/moonbite as @minimbt
 alias @breakinglead/moonbite/knf as @knf
+alias @breakinglead/moonbite/types as @types
 
 // Values
-fn knf_program_to_closure(@knf.Knf, Map[String, @minimbt.Type]) -> Program
+fn knf_program_to_closure(@knf.Knf, Map[String, @types.Type]) -> Program
 
 // Types and methods
 pub struct Closure {
   pub name : Label
-  pub actual_free_vars : Array[@minimbt.Name]
+  pub actual_free_vars : Array[@types.Name]
 }
 impl Closure {
   to_string(Self) -> String
@@ -19,27 +19,27 @@ pub enum Expr {
   Unit
   Int(Int)
   Double(Double)
-  Neg(@minimbt.Name)
-  Add(@minimbt.Name, @minimbt.Name)
-  Sub(@minimbt.Name, @minimbt.Name)
-  Mul(@minimbt.Name, @minimbt.Name)
-  Div(@minimbt.Name, @minimbt.Name)
-  FNeg(@minimbt.Name)
-  FAdd(@minimbt.Name, @minimbt.Name)
-  FSub(@minimbt.Name, @minimbt.Name)
-  FMul(@minimbt.Name, @minimbt.Name)
-  FDiv(@minimbt.Name, @minimbt.Name)
-  IfEq(@minimbt.Name, @minimbt.Name, Expr, Expr)
-  IfLe(@minimbt.Name, @minimbt.Name, Expr, Expr)
-  Let(Tuple[@minimbt.Name, LowType], Expr, Expr)
-  Var(@minimbt.Name)
-  MakeClosure(Tuple[@minimbt.Name, LowType], Closure, Expr)
-  CallClosure(@minimbt.Name, Array[@minimbt.Name])
-  CallDirect(Label, Array[@minimbt.Name])
-  MakeTuple(Array[@minimbt.Name])
-  LetTuple(Array[Tuple[@minimbt.Name, LowType]], @minimbt.Name, Expr)
-  ArrayGet(@minimbt.Name, @minimbt.Name)
-  ArrayPut(@minimbt.Name, @minimbt.Name, @minimbt.Name)
+  Neg(@types.Name)
+  Add(@types.Name, @types.Name)
+  Sub(@types.Name, @types.Name)
+  Mul(@types.Name, @types.Name)
+  Div(@types.Name, @types.Name)
+  FNeg(@types.Name)
+  FAdd(@types.Name, @types.Name)
+  FSub(@types.Name, @types.Name)
+  FMul(@types.Name, @types.Name)
+  FDiv(@types.Name, @types.Name)
+  IfEq(@types.Name, @types.Name, Expr, Expr)
+  IfLe(@types.Name, @types.Name, Expr, Expr)
+  Let(Tuple[@types.Name, LowType], Expr, Expr)
+  Var(@types.Name)
+  MakeClosure(Tuple[@types.Name, LowType], Closure, Expr)
+  CallClosure(@types.Name, Array[@types.Name])
+  CallDirect(Label, Array[@types.Name])
+  MakeTuple(Array[@types.Name])
+  LetTuple(Array[Tuple[@types.Name, LowType]], @types.Name, Expr)
+  ArrayGet(@types.Name, @types.Name)
+  ArrayPut(@types.Name, @types.Name, @types.Name)
   ExternalArray(Label)
 }
 impl Expr {
@@ -48,10 +48,10 @@ impl Expr {
 
 pub struct FuncDef {
   pub name : Label
-  pub old_name : @minimbt.Name
+  pub old_name : @types.Name
   pub ty : LowType
-  pub args : Array[Tuple[@minimbt.Name, LowType]]
-  pub formal_free_vars : Array[Tuple[@minimbt.Name, LowType]]
+  pub args : Array[Tuple[@types.Name, LowType]]
+  pub formal_free_vars : Array[Tuple[@types.Name, LowType]]
   pub body : Expr
 }
 impl FuncDef {
@@ -90,11 +90,11 @@ impl Program {
 }
 
 // Type aliases
-pub typealias LocalEnv = @moonbitlang/core/immut/hashmap.T[@minimbt.Name, LowType]
+pub typealias LocalEnv = @moonbitlang/core/immut/hashmap.T[@types.Name, LowType]
 
-pub typealias Name = @minimbt.Name
+pub typealias Name = @types.Name
 
-pub typealias Type = @minimbt.Type
+pub typealias Type = @types.Type
 
 // Traits
 
