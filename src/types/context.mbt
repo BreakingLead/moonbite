@@ -37,5 +37,5 @@ pub fn finish(self : Ctx) -> String {
   let ast = self.ast_tree.unwrap()
   let g = ast.to_graphviz()
   g.render("ast.dot")
-  ast.to_string()
+  ast.to_sexpr()
 }
