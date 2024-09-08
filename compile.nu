@@ -24,6 +24,6 @@ def "main run" [file: string] {
     } else {
         cp $file "run/tmp.in"
         enter run
-        moon run -q ../src/bin/main.mbt
+        moon run -g ../src/bin/main.mbt
     }
 }

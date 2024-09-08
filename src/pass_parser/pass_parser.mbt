@@ -3,7 +3,7 @@ pub type! ParseError String
 struct Parser {
   tokens : Array[@types.Token]
   mut current : Int
-  mut log : @util.IndentLogger
+  mut log : @util.IndentLogger?
 
   // use global error array rather than pass errors as return value level by level
   // 或许能更快
@@ -12,7 +12,7 @@ struct Parser {
 
 fn Parser::new(
   tokens : Array[@types.Token],
-  log : @util.IndentLogger
+  ~log : @util.IndentLogger? = None
 ) -> Parser {
   { tokens, current: 0, log, errors: [] }
 }
@@ -23,16 +23,20 @@ fn Parser::new(
 //  | add_sub_level_expr '==' expr
 //  | add_sub_level_expr '<=' expr;
 
-fn Parser::end(self : Parser) -> Bool {
+fn Parser::is_at_end(self : Parser) -> Bool {
   self.current >= self.tokens.length()
 }
 
 fn Parser::peek(self : Parser, ~distance : Int = 0) -> @types.Token {
-  self.tokens[self.current]
+  if self.is_at_end() {
+    @types.Token::NONE
+  } else {
+    self.tokens[self.current]
+  }
 }
 
 fn Parser::check(self : Parser, token : @types.Token) -> Bool {
-  if self.end() {
+  if self.is_at_end() {
     false
   } else {
     self.peek() == token
@@ -40,7 +44,7 @@ fn Parser::check(self : Parser, token : @types.Token) -> Bool {
 }
 
 fn Parser::advance(self : Parser) -> @types.Token {
-  if not(self.end()) {
+  if not(self.is_at_end()) {
     self.current += 1
   }
   self.tokens[self.current - 1]
@@ -52,8 +56,7 @@ fn Parser::expression(self : Parser) -> @types.Syntax {
 
 fn Parser::equality(self : Parser) -> @types.Syntax {
   let mut all = self.comparison()
-  let now = self.peek()
-  while now == @types.Token::EQ {
+  while self.check(@types.Token::EQ) {
     let _ = self.advance()
     let right = self.expression()
     all = @types.Syntax::Eq(all, right)
@@ -64,10 +67,10 @@ fn Parser::equality(self : Parser) -> @types.Syntax {
 fn Parser::comparison(self : Parser) -> @types.Syntax {
   let mut all = self.term()
   let now = self.peek()
-  while now == @types.Token::GE ||
-        now == @types.Token::LE ||
-        now == @types.Token::GT ||
-        now == @types.Token::LT {
+  while self.check(@types.Token::GE) ||
+        self.check(@types.Token::LE) ||
+        self.check(@types.Token::GT) ||
+        self.check(@types.Token::LT) {
     let _ = self.advance()
     let right = self.term()
     match now {
@@ -87,8 +90,8 @@ fn Parser::comparison(self : Parser) -> @types.Syntax {
 // term           → factor ( ( "-" | "+" ) factor )* ;
 fn Parser::term(self : Parser) -> @types.Syntax {
   let mut all = self.factor()
-  let now = self.peek()
-  while now == @types.Token::ADD || now == @types.Token::SUB {
+  while self.check(@types.Token::ADD) || self.check(@types.Token::SUB) {
+    let now = self.peek()
     let _ = self.advance()
     let right = self.factor()
     match now {
@@ -105,9 +108,8 @@ fn Parser::term(self : Parser) -> @types.Syntax {
 // factor         → unary ( ( "/" | "*" ) unary )* ;
 fn Parser::factor(self : Parser) -> @types.Syntax {
   let mut all = self.unary()
-  let now = self.peek()
-  while now == @types.Token::DIV || now == @types.Token::MUL {
-    let _ = self.advance()
+  while self.check(@types.Token::DIV) || self.check(@types.Token::MUL) {
+    let now = self.advance()
     let right = self.unary()
     match now {
       @types.Token::DIV =>
@@ -121,8 +123,7 @@ fn Parser::factor(self : Parser) -> @types.Syntax {
 }
 
 fn Parser::unary(self : Parser) -> @types.Syntax {
-  let now = self.peek()
-  if now == @types.Token::SUB {
+  if self.check(@types.Token::SUB) {
     let _ = self.advance()
     let right = self.unary()
     @types.Syntax::Neg(right, kind=None)
@@ -160,7 +161,10 @@ fn Parser::primary(self : Parser) -> @types.Syntax {
       self.consume_or_error(@types.Token::RPAREN)
       expr
     }
-    _ => panic()
+    k => {
+      println("Unexpected token: \{k}")
+      panic()
+    }
   }
 }
 
@@ -178,18 +182,59 @@ fn Parser::error(
   ~syntax : @types.Syntax? = None,
   message : String
 ) -> Unit {
-  self.log.write_string("Parser error at token \{self.peek()}:\n")
-  self.log.indent()
-  self.log.write_string("message: \{message}\n")
-  if syntax.is_empty() {
-    self.log.write_string("syntax: not provided\n")
-  } else {
-    self.log.write_string("syntax: \{syntax}\n")
+  if not(self.log.is_empty()) {
+    self.log.unwrap().write_string("Parser error at token \{self.peek()}:\n")
+    self.log.unwrap().indent()
+    self.log.unwrap().write_string("message: \{message}\n")
+    if syntax.is_empty() {
+      self.log.unwrap().write_string("syntax: not provided\n")
+    } else {
+      self.log.unwrap().write_string("syntax: \{syntax}\n")
+    }
+    self.log.unwrap().outdent()
   }
-  self.log.outdent()
+}
+
+fn Parser::finish(self : Parser) -> @types.Syntax {
+  self.expression()
+}
+
+test "parser" {
+  let tokens = [
+    @types.Token::INT_LITERAL(1),
+    @types.Token::ADD,
+    @types.Token::INT_LITERAL(2),
+    @types.Token::MUL,
+    @types.Token::DOUBLE_LITERAL(3.14),
+    @types.Token::SUB,
+    @types.Token::INT_LITERAL(4),
+  ]
+  let parser = Parser::new(tokens)
+  let syntax = parser.finish()
+  syntax.to_graphviz().render("a.dot")
+  assert_eq!(syntax.to_sexpr(), "(subi (addi 1 (muli 2 3.14)) 4)")
+}
+
+test "parser 2" {
+  let tokens = [
+    @types.Token::TRUE,
+    @types.Token::EQ,
+    @types.Token::INT_LITERAL(2),
+    @types.Token::GT,
+    @types.Token::INT_LITERAL(1),
+  ]
+  let parser = Parser::new(tokens)
+  let syntax = parser.finish()
+  println(syntax.to_sexpr())
+  assert_eq!(syntax.to_sexpr(), "(= #t (not (<= 2 1)))")
 }
 
 pub fn pass_parser(ctx : @types.Ctx) -> @types.Ctx {
-  let parser = Parser::new(ctx.tokens.unwrap(), ctx.log)
-  ctx
+  let parser = Parser::new(ctx.tokens.unwrap(), log=Some(ctx.log))
+  if not(parser.errors.is_empty()) {
+    panic()
+  } else {
+    let syntax = parser.finish()
+    { ..ctx, ast_tree: Some(syntax) }
+  }
 }

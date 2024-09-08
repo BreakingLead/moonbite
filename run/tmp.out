@@ -1,8 +1,1 @@
-FN
-IDENTIFIER("main")
-LCURLYBRACKET
-IDENTIFIER("a")
-LPAREN
-DOUBLE_LITERAL(12.34)
-RPAREN
-RCURLYBRACKET
+(addi (addi (addi (addi (addi (addi 1 (muli 2 3)) 4) (divi 5 (addi 6 7))) 8) (neg 9)) 10.1)
