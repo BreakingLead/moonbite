@@ -1,6 +1,7 @@
 {
     "import": [
-        "breakinglead/moonbite/pass_lex",
-        "breakinglead/moonbite/types"
+      "breakinglead/moonbite/pass_lex",
+      "breakinglead/moonbite/types",
+      "breakinglead/moonbite/util"
     ]
 }

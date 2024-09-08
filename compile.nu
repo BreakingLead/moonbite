@@ -23,6 +23,7 @@ def "main run" [file: string] {
         print $"File not found: ($file)"
     } else {
         cp $file "run/tmp.in"
-        moon run src/main/main.mbt
+        enter run
+        moon run -q ../src/bin/main.mbt
     }
 }

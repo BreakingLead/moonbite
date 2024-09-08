@@ -67,9 +67,10 @@ struct Scanner {
   mut current : Int
   mut line : Int
   mut had_error : Bool
+  mut logger : @util.IndentLogger
 }
 
-fn Scanner::new(source : String) -> Scanner {
+fn Scanner::new(source : String, logger : @util.IndentLogger) -> Scanner {
   {
     source,
     tokens: Array::new(),
@@ -77,18 +78,19 @@ fn Scanner::new(source : String) -> Scanner {
     current: 0,
     line: 1,
     had_error: false,
+    logger,
   }
 }
 
 fn Scanner::error(self : Scanner, message : String) -> Unit {
   self.had_error = true
-  @util.die(
-    "At line " +
-    self.line.to_string() +
-    " |" +
-    self.source.substring(start=self.start, end=self.current) +
-    "| has error: " +
-    message,
+  self.logger.write_string("Lexical error:\n")
+  self.logger.indent()
+  self.logger.write_string(
+    #|Token `\{self.source.substring(start=self.start, end=self.current)}` has error:
+    #|\{message}
+    #|at line \{self.line} 
+    ,
   )
 }
 
@@ -239,7 +241,10 @@ fn Scanner::scan_tokens(self : Scanner) -> Array[@types.Token] {
 }
 
 test "tokenize double literal and integer literal" {
-  let scanner = Scanner::new("let x = 123.456; let y = 123;")
+  let scanner = Scanner::new(
+    "let x = 123.456; let y = 123;",
+    @util.IndentLogger::new(Buffer::new()),
+  )
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -259,7 +264,10 @@ test "tokenize double literal and integer literal" {
 }
 
 test "tokenize identifier" {
-  let scanner = Scanner::new("let aaabbb = 123; fn main() { meow();}")
+  let scanner = Scanner::new(
+    "let aaabbb = 123; fn main() { meow();}",
+    @util.IndentLogger::new(Buffer::new()),
+  )
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -284,7 +292,10 @@ test "tokenize identifier" {
 }
 
 test "tokenize if-else statements" {
-  let scanner = Scanner::new("if (x > 0) { print(x); } else { print(-x); }")
+  let scanner = Scanner::new(
+    "if (x > 0) { print(x); } else { print(-x); }",
+    @util.IndentLogger::new(Buffer::new()),
+  )
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -316,7 +327,10 @@ test "tokenize if-else statements" {
 }
 
 test "tokenize >= > <= <" {
-  let scanner = Scanner::new("if x>=0 { if y<0 {} }")
+  let scanner = Scanner::new(
+    "if x>=0 { if y<0 {} }",
+    @util.IndentLogger::new(Buffer::new()),
+  )
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -337,8 +351,8 @@ test "tokenize >= > <= <" {
   )
 }
 
-pub fn tokenize(ctx : @moonbite.Ctx) -> @moonbite.Ctx {
-  let scanner = Scanner::new(ctx.code)
+pub fn pass_tokenize(ctx : @types.Ctx) -> @types.Ctx {
+  let scanner = Scanner::new(ctx.code, ctx.log)
   let tokens = scanner.scan_tokens()
   { ..ctx, tokens: Some(tokens) }
 }

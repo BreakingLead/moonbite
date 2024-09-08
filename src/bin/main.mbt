@@ -1,8 +1,10 @@
 fn main {
-  let code = @fs.read_to_string("run/tmp.in")
-  let ctx = @moonbite.Ctx::new(code) |> @pass_lex.tokenize
+  let code = @fs.read_to_string("tmp.in")
+  let ctx = @types.Ctx::new(code)
+    |> @pass_lex.pass_tokenize
+    |> @pass_parser.pass_parser
   let result = ctx.finish()
-  @fs.write_to_string("run/tmp.out", result)
+  @fs.write_to_string("tmp.out", result)
 }
 
 fn main_w() -> Unit {
@@ -80,7 +82,7 @@ fn main_w() -> Unit {
     file.unwrap()
   }
   let contents = @fs.read_to_string(file)
-  let typechecked = to_typecheked(contents)
+  let typechecked = to_typechecked(contents)
   if print_ast.val {
     println(typechecked.to_string())
   }
@@ -151,7 +153,7 @@ fn main_w() -> Unit {
   }
 }
 
-fn to_typecheked(source : String) -> @types.Syntax {
+fn to_typechecked(source : String) -> @types.Syntax {
   abort("todo")
 }
 
