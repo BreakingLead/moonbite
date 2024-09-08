@@ -330,6 +330,107 @@ pub fn Syntax::from_json(json : Json) -> Syntax! {
   }
 }
 
+pub fn Syntax::to_sexpr(self : Syntax) -> String {
+  match self {
+    Unit => "()"
+    Bool(b) => if b { "#t" } else { "#f" }
+    Int(i) => i.to_string()
+    Double(f) => f.to_string()
+    Not(e) => "(not \{to_sexpr(e)})"
+    Array(a, b) => "(array-make \{to_sexpr(a)} \{to_sexpr(b)})"
+    Neg(e, kind=Some(Double)) => "(fneg \{to_sexpr(e)})"
+    Neg(e, kind=_) => "(neg \{to_sexpr(e)})"
+    App(f, args) => "(\{to_sexpr(f)} " + args.map(to_sexpr).join(" ") + ")"
+    Get(arr, idx) => "(array-ref \{to_sexpr(arr)} \{to_sexpr(idx)})"
+    If(c, t, f) => "(if \{to_sexpr(c)} \{to_sexpr(t)} \{to_sexpr(f)})"
+    Prim(e1, e2, op, kind=Some(Double)) =>
+      "(\{op.to_string()}-d \{to_sexpr(e1)} \{to_sexpr(e2)})"
+    Prim(e1, e2, op, kind=_) =>
+      "(\{op.to_string()}-i \{to_sexpr(e1)} \{to_sexpr(e2)})"
+    Eq(e1, e2) => "(= \{to_sexpr(e1)} \{to_sexpr(e2)})"
+    LE(e1, e2) => "(<= \{to_sexpr(e1)} \{to_sexpr(e2)})"
+    Let((x, t), y, then) =>
+      "(let [(\{x} \{t} \{to_sexpr(y)})] (\{to_sexpr(then)}))"
+    LetRec(f, s) => "(\{f} \{to_sexpr(s)})"
+    LetTuple(defs, value, body) => {
+      // 这里有错误
+      let defs = defs.map(fn { (x, t) => "(\{x} \{t})" }).join(" ")
+      "(let-tuple (\{defs}) (\{to_sexpr(value)}) (\{to_sexpr(body)}))"
+    }
+    Put(arr, idx, value) =>
+      "(array-set \{to_sexpr(arr)} \{to_sexpr(idx)} \{to_sexpr(value)})"
+    Var(id) => id
+    Tuple(es) => es.map(to_sexpr).join(" ")
+  }
+}
+
+pub fn to_graphviz(self : Syntax) -> Graphviz {
+  let g = Graphviz::new()
+  fn do(s) -> Int {
+    match s {
+      Syntax::Unit => g.add_node("Unit")
+      Bool(b) => g.add_node("Bool\{b}")
+      Int(i) => g.add_node(i.to_string())
+      Double(f) => g.add_node(f.to_string())
+      Not(e) => {
+        let f = g.add_node("Not")
+        let t = do(e)
+        g.add_edge(f, t)
+        f
+      }
+      Neg(e, kind=_) => {
+        let f = g.add_node("Neg")
+        let t = do(e)
+        g.add_edge(f, t)
+        f
+      }
+      Prim(e1, e2, op, kind=_) => {
+        let f = g.add_node(op.to_string())
+        let t1 = do(e1)
+        let t2 = do(e2)
+        g.add_edge(f, t1)
+        g.add_edge(f, t2)
+        f
+      }
+      Eq(e1, e2) => {
+        let f = g.add_node("=")
+        let t1 = do(e1)
+        let t2 = do(e2)
+        g.add_edge(f, t1)
+        g.add_edge(f, t2)
+        f
+      }
+      LE(e1, e2) => {
+        let f = g.add_node("<=")
+        let t1 = do(e1)
+        let t2 = do(e2)
+        g.add_edge(f, t1)
+        g.add_edge(f, t2)
+        f
+      }
+      If(c, y, n) => {
+        let f = g.add_node("Condition \{c.to_sexpr()}")
+        let t2 = do(y)
+        let t3 = do(n)
+        g.add_edge(f, t2)
+        g.add_edge(f, t3)
+        f
+      }
+      // TODO
+      _ => panic()
+    }
+  }
+
+  let _ = do(self)
+  g
+}
+
+test "ast to graphviz" {
+  let ast = Syntax::Eq(Syntax::Int(1), Syntax::Int(2))
+  let g = to_graphviz(ast)
+  g.render("ast.dot")
+}
+
 test {
   inspect!(
     Syntax::App(Syntax::Var("f"), []).to_json().stringify(),

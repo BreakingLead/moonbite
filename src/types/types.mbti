@@ -1,0 +1,209 @@
+package breakinglead/moonbite/types
+
+alias @breakinglead/moonbite/util as @util
+
+// Values
+
+// Types and methods
+pub struct Ctx {
+  pub code : String
+  pub tokens : Array[Token]?
+  pub ast_tree : Syntax?
+  pub log : @util.IndentLogger
+  pub error : Bool
+}
+impl Ctx {
+  finish(Self) -> String
+  new(String) -> Self
+}
+
+pub struct Edge {
+  pub from : Int
+  pub to : Int
+  pub label : String?
+}
+impl Edge {
+  new(Int, Int, ~label : String? = ..) -> Self
+}
+
+pub struct Fundef {
+  pub name : Tuple[String, Type]
+  pub args : Array[Tuple[String, Type]]
+  pub body : Syntax
+}
+impl Fundef {
+  from_json(Json) -> Self!
+  to_json(Self) -> Json
+  to_string(Self) -> String
+}
+
+pub struct Graphviz {
+  pub node_id : Int
+  pub nodes : Array[Node]
+  pub edges : Array[Edge]
+}
+impl Graphviz {
+  add_edge(Self, Int, Int, ~label : String? = ..) -> Unit
+  add_node(Self, String) -> Int
+  new() -> Self
+  render(Self, String) -> Unit
+  to_string(Self) -> String
+}
+
+pub enum Kind {
+  Int
+  Double
+}
+impl Kind {
+  op_equal(Self, Self) -> Bool
+  to_string(Self) -> String
+}
+
+pub struct Name {
+  pub name : String?
+  pub slot : Int
+}
+impl Name {
+  compare(Self, Self) -> Int
+  hash_combine(Self, Hasher) -> Unit
+  name_and_slot(String, Int) -> Self
+  name_only(String) -> Self
+  op_equal(Self, Self) -> Bool
+  slot_only(Int) -> Self
+  to_string(Self) -> String
+}
+
+pub struct Node {
+  pub id : String
+  pub label : String
+}
+impl Node {
+  new(String, String) -> Self
+}
+
+pub enum Op {
+  Add
+  Sub
+  Mul
+  Div
+}
+impl Op {
+  op_equal(Self, Self) -> Bool
+  to_string(Self) -> String
+}
+
+pub enum Syntax {
+  Unit
+  Bool(Bool)
+  Int(Int)
+  Double(Double)
+  Var(String)
+  Tuple(Array[Syntax])
+  Not(Syntax)
+  Array(Syntax, Syntax)
+  Neg(Syntax, Kind?)
+  App(Syntax, Array[Syntax])
+  Get(Syntax, Syntax)
+  If(Syntax, Syntax, Syntax)
+  Prim(Syntax, Syntax, Op, Kind?)
+  Eq(Syntax, Syntax)
+  LE(Syntax, Syntax)
+  Let(Tuple[String, Type], Syntax, Syntax)
+  LetRec(Fundef, Syntax)
+  LetTuple(Array[Tuple[String, Type]], Syntax, Syntax)
+  Put(Syntax, Syntax, Syntax)
+}
+impl Syntax {
+  from_json(Json) -> Self!
+  get_type_if_has(Self) -> Type?
+  to_graphviz(Self) -> Graphviz
+  to_json(Self) -> Json
+  to_sexpr(Self) -> String
+  to_string(Self) -> String
+}
+
+pub enum Token {
+  TRUE
+  FALSE
+  UNIT
+  BOOL
+  INT
+  DOUBLE
+  ARRAY
+  NOT
+  IF
+  ELSE
+  FN
+  LET
+  INT_LITERAL(Int)
+  DOUBLE_LITERAL(Double)
+  IDENTIFIER(String)
+  DOT
+  ADD
+  SUB
+  MUL
+  DIV
+  ASSIGN
+  EQ
+  NE
+  LE
+  LT
+  GE
+  GT
+  LPAREN
+  RPAREN
+  LBRACKET
+  RBRACKET
+  LCURLYBRACKET
+  RCURLYBRACKET
+  ARROW
+  COLON
+  SEMICOLON
+  COMMA
+  UNKNOWN
+}
+impl Token {
+  op_equal(Self, Self) -> Bool
+  to_string(Self) -> String
+}
+
+pub enum Type {
+  Unit
+  Bool
+  Int
+  Double
+  Fun(Array[Type], Type)
+  Tuple(Array[Type])
+  Array(Type)
+  Var(Ref[Type?])
+  Ptr
+}
+impl Type {
+  from_json(Json) -> Self!
+  is_float_like(Self) -> Bool
+  is_ptr_like(Self) -> Bool
+  op_equal(Self, Self) -> Bool
+  size_of(Self, Int) -> Int
+  to_json(Self) -> Json
+  to_string(Self) -> String
+}
+
+// Type aliases
+
+// Traits
+
+// Extension Methods
+impl Show for Fundef
+
+impl Show for Kind
+
+impl Show for Name
+
+impl Show for Op
+
+impl Show for Syntax
+
+impl Show for Token
+
+impl Show for Type
+
