@@ -18,8 +18,6 @@ pub enum Syntax {
   LetRec(Fundef, Syntax) // fn f() {} ; _
   LetTuple(Array[(String, Type)], Syntax, Syntax) // let (_ , _) : (_, _)= _; _
   Put(Syntax, Syntax, Syntax) // _[_] = _
-  // new
-  // Group(Array[Syntax]) // (...)
 } derive(Show)
 
 pub fn Syntax::get_type_if_has(self : Syntax) -> Type? {

@@ -1,11 +1,15 @@
-struct IndentLogger {
-  logger : Logger
+pub struct IndentLogger {
+  logger : Buffer
   mut indent : Int
   mut line_start : Bool
 }
 
-pub fn IndentLogger::new(logger : Logger) -> IndentLogger {
-  IndentLogger::{ logger, indent: 0, line_start: true }
+pub fn IndentLogger::to_string(self : IndentLogger) -> String {
+  self.logger.to_string()
+}
+
+pub fn IndentLogger::new() -> IndentLogger {
+  IndentLogger::{ logger: Buffer::new(), indent: 0, line_start: true }
 }
 
 fn IndentLogger::print_indent(self : IndentLogger) -> Unit {

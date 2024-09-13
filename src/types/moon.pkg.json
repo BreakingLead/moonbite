@@ -1,6 +1,7 @@
 {
   "import": [
     "breakinglead/moonbite/util",
-    "lijunchen/unstable_io/fs"
+    "lijunchen/unstable_io/fs",
+    "lijunchen/unstable_io/env"
   ]
 }

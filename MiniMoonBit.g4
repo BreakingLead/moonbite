@@ -4,12 +4,10 @@ prog: top_level* EOF;
 
 // Top-level
 // 
-// Top level declarations should start at the beginning of the line, i.e.
-// token.column == 0. Since this is non-context-free, it is not included in this
-// backend-agnostic ANTLR grammar.
+// Top level declarations should start at the beginning of the line, i.e. token.column == 0. Since
+// this is non-context-free, it is not included in this backend-agnostic ANTLR grammar.
 top_level: top_let_decl | toplevel_fn_decl;
-top_let_decl:
-	'let' IDENTIFIER ':' type '=' expr ';';
+top_let_decl: 'let' IDENTIFIER ':' type '=' expr ';';
 toplevel_fn_decl: (main_fn_decl | top_fn_decl) ';';
 
 // Function declarations
@@ -24,11 +22,8 @@ param: IDENTIFIER type_annotation;
 fn_body: '{' stmt '}';
 
 nontop_fn_decl:
-	'fn' IDENTIFIER '(' nontop_param_list? ')' (
-		'->' type
-	)? fn_body;
-nontop_param_list:
-	nontop_param (',' nontop_param)*;
+	'fn' IDENTIFIER '(' nontop_param_list? ')' ('->' type)? fn_body;
+nontop_param_list: nontop_param (',' nontop_param)*;
 nontop_param: IDENTIFIER type_annotation?;
 
 // Statements
@@ -40,46 +35,38 @@ stmt:
 	| expr_stmt;
 
 let_tuple_stmt:
-	'let' '(' IDENTIFIER (',' IDENTIFIER)* ')' type_annotation? '=' expr ';'
-		stmt;
-let_stmt:
-	'let' IDENTIFIER type_annotation? '=' expr ';' stmt;
+	'let' '(' IDENTIFIER (',' IDENTIFIER)* ')' type_annotation? '=' expr ';' stmt;
+let_stmt: 'let' IDENTIFIER type_annotation? '=' expr ';' stmt;
 type_annotation: COLON type;
 
-fn_decl_stmt: top_fn_decl ';' stmt;
+fn_decl_stmt: nontop_fn_decl ';' stmt;
 
-assign_stmt:
-	get_expr '=' expr ';' stmt; // x[y] = z;
+assign_stmt: get_expr '=' expr ';' stmt; // x[y] = z;
 expr_stmt: expr;
 
 // Expressions, in order of precedence.
-expr:
-	add_sub_level_expr
-	| add_sub_level_expr '==' expr
-	| add_sub_level_expr '<=' expr;
+expr: // not associative
+	| add_sub_level_expr '==' add_sub_level_expr
+	| add_sub_level_expr '<=' add_sub_level_expr
+	| add_sub_level_expr;
 
-add_sub_level_expr:
-	mul_div_level_expr
-	| mul_div_level_expr '+' add_sub_level_expr
-	| mul_div_level_expr '-' add_sub_level_expr;
+add_sub_level_expr: // left associative
+	| add_sub_level_expr '+' mul_div_level_expr
+	| add_sub_level_expr '-' mul_div_level_expr
+	| mul_div_level_expr;
 
-mul_div_level_expr:
-	if_level_expr
-	| if_level_expr '*' mul_div_level_expr
-	| if_level_expr '/' mul_div_level_expr;
+mul_div_level_expr: // left associative
+	| mul_div_level_expr '*' if_level_expr
+	| mul_div_level_expr '/' if_level_expr
+	| if_level_expr;
 
 if_level_expr: get_or_apply_level_expr | if_expr;
 if_expr: 'if' expr block_expr ('else' block_expr)?;
 
 get_or_apply_level_expr:
-	get_expr
-	| apply_expr
-	| value_expr;
-get_expr: value_expr '[' expr ']'; // x[y]
-apply_expr: empty_apply_expr | nonempty_apply_expr;
-empty_apply_expr: value_expr '(' ')'; // f()
-nonempty_apply_expr:
-	value_expr '(' expr (',' expr)* ')'; // f(x, y)
+	| value_expr
+	| get_or_apply_level_expr '[' expr ']' // x[y]
+	| get_or_apply_level_expr '(' (expr (',' expr)*)? ')'; // f(x, y)
 
 // Value expressions
 value_expr:
@@ -154,3 +141,4 @@ COLON: ':';
 SEMICOLON: ';';
 COMMA: ',';
 WS: [ \t\r\n]+ -> skip;
+COMMENT: '//' ~[\r\n]* -> skip;

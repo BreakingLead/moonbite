@@ -36,5 +36,5 @@ pub enum Token {
   COLON
   SEMICOLON
   COMMA
-  NONE // new
+  EOF // new
 } derive(Show, Eq)

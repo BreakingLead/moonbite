@@ -1,3 +1,4 @@
+// immutable context object
 pub struct Ctx {
   // args : Args
   code : String
@@ -19,8 +20,8 @@ pub struct Ctx {
   // loop_tree : LoopTree
 
   // log
-  log : @util.IndentLogger
-  error : Bool
+  logger : @util.IndentLogger
+  errors : @immut/array.T[MBError]
 }
 
 pub fn Ctx::new(code : String) -> Ctx {
@@ -28,8 +29,18 @@ pub fn Ctx::new(code : String) -> Ctx {
     code,
     tokens: None,
     ast_tree: None,
-    log: @util.IndentLogger::new(Buffer::new()),
-    error: false,
+    logger: @util.IndentLogger::new(),
+    errors: @immut/array.T::new(),
+  }
+}
+
+pub fn Ctx::fmap(self : Ctx, f : (Ctx) -> Ctx) -> Ctx {
+  if self.errors.is_empty() {
+    println(self.logger.to_string())
+    f(self)
+  } else {
+    // exit early if there was an error
+    panic()
   }
 }
 

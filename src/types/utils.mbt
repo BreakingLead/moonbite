@@ -350,8 +350,8 @@ pub fn Syntax::to_sexpr(self : Syntax) -> String {
     Eq(e1, e2) => "(= \{to_sexpr(e1)} \{to_sexpr(e2)})"
     LE(e1, e2) => "(<= \{to_sexpr(e1)} \{to_sexpr(e2)})"
     Let((x, t), y, then) =>
-      "(let [(\{x} \{t} \{to_sexpr(y)})] (\{to_sexpr(then)}))"
-    LetRec(f, s) => "(\{f} \{to_sexpr(s)})"
+      "(let [(\{x} \{t} \{to_sexpr(y)})] in (\{to_sexpr(then)}))"
+    LetRec(f, s) => "(letrec (\{f}) in (\{to_sexpr(s)}))"
     LetTuple(defs, value, body) => {
       // 这里有错误
       let defs = defs.map(fn { (x, t) => "(\{x} \{t})" }).join(" ")

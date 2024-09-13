@@ -70,7 +70,7 @@ struct Scanner {
   mut logger : @util.IndentLogger
 }
 
-fn Scanner::new(source : String, logger : @util.IndentLogger) -> Scanner {
+fn Scanner::new(source : String, ~logger? : @util.IndentLogger) -> Scanner {
   {
     source,
     tokens: Array::new(),
@@ -78,7 +78,7 @@ fn Scanner::new(source : String, logger : @util.IndentLogger) -> Scanner {
     current: 0,
     line: 1,
     had_error: false,
-    logger,
+    logger: logger.or(@util.IndentLogger::new()),
   }
 }
 
@@ -241,10 +241,7 @@ fn Scanner::scan_tokens(self : Scanner) -> Array[@types.Token] {
 }
 
 test "tokenize double literal and integer literal" {
-  let scanner = Scanner::new(
-    "let x = 123.456; let y = 123;",
-    @util.IndentLogger::new(Buffer::new()),
-  )
+  let scanner = Scanner::new("let x = 123.456; let y = 123;")
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -264,10 +261,7 @@ test "tokenize double literal and integer literal" {
 }
 
 test "tokenize identifier" {
-  let scanner = Scanner::new(
-    "let aaabbb = 123; fn main() { meow();}",
-    @util.IndentLogger::new(Buffer::new()),
-  )
+  let scanner = Scanner::new("let aaabbb = 123; fn main() { meow();}")
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -292,10 +286,7 @@ test "tokenize identifier" {
 }
 
 test "tokenize if-else statements" {
-  let scanner = Scanner::new(
-    "if (x > 0) { print(x); } else { print(-x); }",
-    @util.IndentLogger::new(Buffer::new()),
-  )
+  let scanner = Scanner::new("if (x > 0) { print(x); } else { print(-x); }")
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -327,10 +318,7 @@ test "tokenize if-else statements" {
 }
 
 test "tokenize >= > <= <" {
-  let scanner = Scanner::new(
-    "if x>=0 { if y<0 {} }",
-    @util.IndentLogger::new(Buffer::new()),
-  )
+  let scanner = Scanner::new("if x>=0 { if y<0 {} }")
   let tokens = scanner.scan_tokens()
   assert_eq!(
     tokens,
@@ -351,8 +339,30 @@ test "tokenize >= > <= <" {
   )
 }
 
+test "tokenize array" {
+  let scanner = Scanner::new("let xs = Array::make(a, b)")
+  let tokens = scanner.scan_tokens()
+  assert_eq!(
+    tokens,
+    [
+      @types.Token::LET,
+      @types.Token::IDENTIFIER("xs"),
+      @types.Token::ASSIGN,
+      @types.Token::ARRAY,
+      @types.Token::COLON,
+      @types.Token::COLON,
+      @types.Token::IDENTIFIER("make"),
+      @types.Token::LPAREN,
+      @types.Token::IDENTIFIER("a"),
+      @types.Token::COMMA,
+      @types.Token::IDENTIFIER("b"),
+      @types.Token::RPAREN,
+    ],
+  )
+}
+
 pub fn pass_tokenize(ctx : @types.Ctx) -> @types.Ctx {
-  let scanner = Scanner::new(ctx.code, ctx.log)
+  let scanner = Scanner::new(ctx.code, logger=ctx.logger)
   let tokens = scanner.scan_tokens()
   { ..ctx, tokens: Some(tokens) }
 }
