@@ -134,7 +134,7 @@ pub fn to_json(self : Syntax) -> Json {
       let op = if kind == Some(Double) { "F\{op}" } else { "{op}" }
       [op |> Json::String, e1.to_json(), e2.to_json()]
     }
-    Eq(e1, e2) => ["Eq", e1.to_json(), e2.to_json()]
+    EQ(e1, e2) => ["Eq", e1.to_json(), e2.to_json()]
     LE(e1, e2) => ["LE", e1.to_json(), e2.to_json()]
     If(e1, e2, e3) => ["If", e1.to_json(), e2.to_json(), e3.to_json()]
     Let((x, t), e1, e2) =>
@@ -152,8 +152,8 @@ pub fn to_json(self : Syntax) -> Json {
       ]
     Array(size, init) => ["Array", size.to_json(), init.to_json()]
     Get(arr, idx) => ["Get", arr.to_json(), idx.to_json()]
-    Put(arr, idx, value) =>
-      ["Put", arr.to_json(), idx.to_json(), value.to_json()]
+    Put(arr, idx, value, next) =>
+      ["Put", arr.to_json(), idx.to_json(), value.to_json(), next.to_json()]
   }
 }
 
@@ -236,7 +236,7 @@ pub fn Syntax::from_json(json : Json) -> Syntax! {
         Div,
         kind=Some(Kind::Double),
       )
-    ["Eq", e1, e2] => Eq(e1 |> Syntax::from_json!(), e2 |> Syntax::from_json!())
+    ["Eq", e1, e2] => EQ(e1 |> Syntax::from_json!(), e2 |> Syntax::from_json!())
     ["LE", e1, e2] => LE(e1 |> Syntax::from_json!(), e2 |> Syntax::from_json!())
     ["If", e1, e2, e3] =>
       If(
@@ -320,11 +320,12 @@ pub fn Syntax::from_json(json : Json) -> Syntax! {
       Array(size |> Syntax::from_json!(), init |> Syntax::from_json!())
     ["Get", arr, idx] =>
       Get(arr |> Syntax::from_json!(), idx |> Syntax::from_json!())
-    ["Put", arr, idx, value] =>
+    ["Put", arr, idx, value, next] =>
       Put(
         arr |> Syntax::from_json!(),
         idx |> Syntax::from_json!(),
         value |> Syntax::from_json!(),
+        next |> Syntax::from_json!(),
       )
     _ => fail!("invalid json: should contain an operator")
   }
@@ -332,36 +333,44 @@ pub fn Syntax::from_json(json : Json) -> Syntax! {
 
 pub fn Syntax::to_sexpr(self : Syntax) -> String {
   match self {
-    Unit => "()"
+    Unit => "Unit"
     Bool(b) => if b { "#t" } else { "#f" }
     Int(i) => i.to_string()
     Double(f) => f.to_string()
-    Not(e) => "(not \{to_sexpr(e)})"
-    Array(a, b) => "(array-make \{to_sexpr(a)} \{to_sexpr(b)})"
-    Neg(e, kind=Some(Double)) => "(fneg \{to_sexpr(e)})"
-    Neg(e, kind=_) => "(neg \{to_sexpr(e)})"
-    App(f, args) => "(\{to_sexpr(f)} " + args.map(to_sexpr).join(" ") + ")"
-    Get(arr, idx) => "(array-ref \{to_sexpr(arr)} \{to_sexpr(idx)})"
-    If(c, t, f) => "(if \{to_sexpr(c)} \{to_sexpr(t)} \{to_sexpr(f)})"
+    Not(e) => "(not \{Syntax::to_sexpr(e)})"
+    Array(a, b) => "(array-make \{Syntax::to_sexpr(a)} \{Syntax::to_sexpr(b)})"
+    Neg(e, kind=Some(Double)) => "(fneg \{Syntax::to_sexpr(e)})"
+    Neg(e, kind=_) => "(neg \{Syntax::to_sexpr(e)})"
+    App(f, args) =>
+      "(\{Syntax::to_sexpr(f)} " + args.map(Syntax::to_sexpr).join(" ") + ")"
+    Get(arr, idx) =>
+      "(array-ref \{Syntax::to_sexpr(arr)} \{Syntax::to_sexpr(idx)})"
+    If(c, t, f) =>
+      "(if \{Syntax::to_sexpr(c)} \{Syntax::to_sexpr(t)} \{Syntax::to_sexpr(f)})"
     Prim(e1, e2, op, kind=Some(Double)) =>
-      "(\{op.to_string().to_lower()}d \{to_sexpr(e1)} \{to_sexpr(e2)})"
+      "(\{op.to_string().to_lower()}d \{Syntax::to_sexpr(e1)} \{Syntax::to_sexpr(e2)})"
     Prim(e1, e2, op, kind=_) =>
-      "(\{op.to_string().to_lower()}i \{to_sexpr(e1)} \{to_sexpr(e2)})"
-    Eq(e1, e2) => "(= \{to_sexpr(e1)} \{to_sexpr(e2)})"
-    LE(e1, e2) => "(<= \{to_sexpr(e1)} \{to_sexpr(e2)})"
+      "(\{op.to_string().to_lower()}i \{Syntax::to_sexpr(e1)} \{Syntax::to_sexpr(e2)})"
+    EQ(e1, e2) => "(= \{Syntax::to_sexpr(e1)} \{Syntax::to_sexpr(e2)})"
+    LE(e1, e2) => "(<= \{Syntax::to_sexpr(e1)} \{Syntax::to_sexpr(e2)})"
     Let((x, t), y, then) =>
-      "(let [(\{x} \{t} \{to_sexpr(y)})] in (\{to_sexpr(then)}))"
-    LetRec(f, s) => "(letrec (\{f}) in (\{to_sexpr(s)}))"
+      "(let [(\{x} \{t} \{Syntax::to_sexpr(y)})] then (\{Syntax::to_sexpr(then)}))"
+    LetRec(f, s) => "(letrec (\{f.to_sexpr()}) then (\{Syntax::to_sexpr(s)}))"
     LetTuple(defs, value, body) => {
-      // 这里有错误
+      // 这里不太好看，等会改改
       let defs = defs.map(fn { (x, t) => "(\{x} \{t})" }).join(" ")
-      "(let-tuple (\{defs}) (\{to_sexpr(value)}) (\{to_sexpr(body)}))"
+      "(let-tuple (\{defs}) (\{Syntax::to_sexpr(value)}) (\{Syntax::to_sexpr(body)}))"
     }
-    Put(arr, idx, value) =>
-      "(array-set \{to_sexpr(arr)} \{to_sexpr(idx)} \{to_sexpr(value)})"
+    Put(arr, idx, value, next) =>
+      "(array-set \{Syntax::to_sexpr(arr)} \{Syntax::to_sexpr(idx)} \{Syntax::to_sexpr(value)} (\{Syntax::to_sexpr(next)}))"
     Var(id) => id
-    Tuple(es) => es.map(to_sexpr).join(" ")
+    Tuple(es) => es.map(Syntax::to_sexpr).join(" ")
   }
+}
+
+pub fn Fundef::to_sexpr(self : Fundef) -> String {
+  let args = self.args.map(fn { (x, t) => "(\{x}:\{t})" }).join(" ")
+  "(define \{self.name.0} (\{args}) (\{self.body.to_sexpr()}))"
 }
 
 pub fn to_graphviz(self : Syntax) -> Graphviz {
@@ -392,7 +401,7 @@ pub fn to_graphviz(self : Syntax) -> Graphviz {
         g.add_edge(f, t2)
         f
       }
-      Eq(e1, e2) => {
+      EQ(e1, e2) => {
         let f = g.add_node("=")
         let t1 = do(e1)
         let t2 = do(e2)
@@ -426,7 +435,7 @@ pub fn to_graphviz(self : Syntax) -> Graphviz {
 }
 
 test "ast to graphviz" {
-  let ast = Syntax::Eq(Syntax::Int(1), Syntax::Int(2))
+  let ast = Syntax::EQ(Syntax::Int(1), Syntax::Int(2))
   let g = to_graphviz(ast)
   g.render("ast.dot")
 }

@@ -12,12 +12,13 @@ pub enum Syntax {
   Get(Syntax, Syntax) // _[_]
   If(Syntax, Syntax, Syntax) // if _ { _ } else { _ }
   Prim(Syntax, Syntax, Op, mut ~kind : Kind?) // _+ - * / _
-  Eq(Syntax, Syntax) // _==_
+  EQ(Syntax, Syntax) // _==_
   LE(Syntax, Syntax) // _<=_
   Let((String, Type), Syntax, Syntax) // let _: _ = _; _
   LetRec(Fundef, Syntax) // fn f() {} ; _
   LetTuple(Array[(String, Type)], Syntax, Syntax) // let (_ , _) : (_, _)= _; _
-  Put(Syntax, Syntax, Syntax) // _[_] = _
+  // Put(Syntax, Syntax, Syntax) // _[_] = _
+  Put(Syntax, Syntax, Syntax, Syntax) // _[_] = _; _
 } derive(Show)
 
 pub fn Syntax::get_type_if_has(self : Syntax) -> Type? {
@@ -41,7 +42,10 @@ pub enum Op {
 } derive(Show, Eq)
 
 pub struct Fundef {
+  // name.1 is the type of the function, not the type of the return value
+  // 
   name : (String, Type)
+  // 为什么要再存一次参数类型？无所谓...
   args : Array[(String, Type)]
   body : Syntax
 } derive(Show)

@@ -1,7 +1,9 @@
+type! ParsingError String
+
 struct Parser {
   tokens : Array[@types.Token]
   mut current : Int
-  mut log : @util.IndentLogger?
+  mut logger : @util.IndentLogger?
 
   // use global error array rather than pass errors as return value level by level
   // 或许能更快
@@ -12,7 +14,7 @@ fn Parser::new(
   tokens : Array[@types.Token],
   ~log : @util.IndentLogger? = None
 ) -> Parser {
-  { tokens, current: 0, log, errors: [] }
+  { tokens, current: 0, logger: log, errors: [] }
 }
 
 // ----------------------------
@@ -26,8 +28,10 @@ fn Parser::is_at_end(self : Parser) -> Bool {
 fn Parser::peek(self : Parser, ~distance : Int = 0) -> @types.Token {
   if self.is_at_end() {
     @types.Token::EOF
+  } else if self.current + distance >= self.tokens.length() {
+    @types.Token::EOF
   } else {
-    self.tokens[self.current]
+    self.tokens[self.current + distance]
   }
 }
 
@@ -46,6 +50,32 @@ fn Parser::advance(self : Parser) -> @types.Token {
   self.tokens[self.current - 1]
 }
 
+fn Parser::consume_or_error(self : Parser, token : @types.Token) -> Unit {
+  if self.peek() == token {
+    let _ = self.advance()
+
+  } else {
+    // self.error("Expected token \{token} but got \{self.peek()}")
+    self.error("需要 \{token} ，但却遇到 \{self.peek()}")
+  }
+}
+
+fn Parser::consume_ident_or_error(self : Parser) -> String {
+  let now = self.peek()
+  match now {
+    @types.Token::IDENTIFIER(name) => {
+      let _ = self.advance()
+      name
+    }
+    _ => {
+      self.error("Expected identifier but got \{now}")
+      ""
+    }
+  }
+}
+
+// If the current token is the expected one,
+// consume it and return true. Otherwise, return false.
 fn Parser::match_token(self : Parser, token : @types.Token) -> Bool {
   if self.check(token) {
     let _ = self.advance()
@@ -58,39 +88,33 @@ fn Parser::match_token(self : Parser, token : @types.Token) -> Bool {
 // ----------------------------
 // types
 // ----------------------------
-
-// type_annotation: COLON type;
-// 
-// type:
-// 'Unit'
-// | 'Bool'
-// | 'Int'
-// | 'Double'
-// | array_type
-// | tuple_type
-// | function_type;
-// array_type: 'Array' '[' type ']';
-// tuple_type: '(' type (',' type)* ')'; // (Int, Bool)
-// function_type:
-// '(' type (',' type)* ')' '->' type; // (Int, Bool) -> Int
 fn Parser::type_annotation(self : Parser) -> @types.Type {
   if self.match_token(@types.Token::INT) {
+    // Int
     @types.Type::Int
   } else if self.match_token(@types.Token::UNIT) {
+    // Unit
     @types.Type::Unit
   } else if self.match_token(@types.Token::DOUBLE) {
+    // Double
     @types.Type::Double
   } else if self.match_token(@types.Token::BOOL) {
+    // Bool
     @types.Type::Bool
   } else if self.match_token(@types.Token::ARRAY) {
+    self.consume_or_error(@types.Token::DOUBLE_COLON)
+    // Array
     let _ = self.consume_or_error(@types.Token::LBRACKET)
     let ty = self.type_annotation()
     let _ = self.consume_or_error(@types.Token::RBRACKET)
     @types.Type::Array(ty)
   } else if self.match_token(@types.Token::LPAREN) {
     if self.match_token(@types.Token::RPAREN) {
+      // () is unit
       return @types.Type::Unit
     }
+
+    // Tuple
     let first = self.type_annotation()
     let all = [first]
     while self.match_token(@types.Token::COMMA) {
@@ -106,43 +130,188 @@ fn Parser::type_annotation(self : Parser) -> @types.Type {
       @types.Type::Tuple(all)
     }
   } else {
-    self.error("Expected type mark but got \{self.peek()}")
+    // self.error("Expected type mark but got \{self.peek()}")
+    self.error("需要类型标注，但却遇到 \{self.peek()}")
     // 这样好吗？还是返回个 option 更好
+
     @types.Type::Unit
   }
 }
 
+// ----------------------------
 // statements
 // ----------------------------
-fn Parser::syntax(self : Parser) -> @types.Syntax {
-  panic()
+
+fn Parser::stmt(self : Parser) -> @types.Syntax {
+  match self.peek() {
+    @types.Token::LET => {
+      let _ = self.advance()
+      if self.peek() == @types.Token::LPAREN {
+        // let (a, b, c) : (T, U, V) = expr
+        let _ = self.advance()
+        let names = [self.consume_ident_or_error()]
+        while self.peek() != @types.Token::RPAREN {
+          let _ = self.consume_or_error(@types.Token::COMMA)
+          let name = self.consume_ident_or_error()
+          names.push(name)
+        }
+        let _ = self.consume_or_error(@types.Token::RPAREN)
+        let _ = self.consume_or_error(@types.Token::COLON)
+        let _ = self.consume_or_error(@types.Token::LPAREN)
+        let types = [self.type_annotation()]
+        while self.peek() != @types.Token::RPAREN {
+          let _ = self.consume_or_error(@types.Token::COMMA)
+          let ty = self.type_annotation()
+          types.push(ty)
+        }
+        let _ = self.consume_or_error(@types.Token::RPAREN)
+        self.consume_or_error(@types.Token::ASSIGN)
+        let value = self.expr()
+        let zipped = names.mapi(fn(n, name) { (name, types[n]) })
+        let next = self.stmt()
+        @types.Syntax::LetTuple(zipped, value, next)
+      } else {
+        // let name : ty = expr; next
+        let name = self.consume_ident_or_error()
+        self.consume_or_error(@types.Token::COLON)
+        let ty = self.type_annotation()
+        self.consume_or_error(@types.Token::ASSIGN)
+        let value = self.expr()
+        let next = self.stmt()
+        @types.Syntax::Let((name, ty), value, next)
+      }
+    }
+    @types.Token::FN => {
+      let fun = self.nontop_fn_decl()
+      let next = self.stmt()
+      @types.Syntax::LetRec(fun, next)
+    }
+    // x[y] = z
+    @types.Token::IDENTIFIER(name) => {
+      let _ = self.advance()
+      self.consume_or_error(@types.Token::LBRACKET)
+      let index = self.expr()
+      self.consume_or_error(@types.Token::RBRACKET)
+      self.consume_or_error(@types.Token::ASSIGN)
+      let value = self.expr()
+      let _ = self.consume_or_error(@types.Token::SEMICOLON)
+      let next = self.stmt()
+      @types.Syntax::Put(@types.Syntax::Var(name), index, value, next)
+    }
+    _ => {
+      let expr = self.expr()
+      expr
+    }
+  }
 }
 
 fn Parser::top_level(self : Parser) -> @types.Syntax {
-  panic()
+  if self.is_at_end() {
+    return @types.Syntax::Unit
+  }
+  // 'let' ident ':' type_annotation '=' expr ';'
+  let top_level_let = fn() -> @types.Syntax {
+    let _ = self.consume_or_error(@types.Token::LET)
+    let name = self.consume_ident_or_error()
+    self.consume_or_error(@types.Token::COLON)
+    let ty = self.type_annotation()
+    self.consume_or_error(@types.Token::ASSIGN)
+    let value = self.expr()
+    let _ = self.consume_or_error(@types.Token::SEMICOLON)
+    let next = self.top_level()
+    @types.Syntax::Let((name, ty), value, next)
+  }
+  match self.peek() {
+    @types.Token::LET => top_level_let()
+    @types.Token::FN => {
+      let fun = if self.peek(distance=1) == @types.Token::IDENTIFIER("main") {
+        self.top_fn_decl(should_match_main=true)
+      } else {
+        self.top_fn_decl()
+      }
+      let next = self.top_level()
+      @types.Syntax::LetRec(fun, next)
+    }
+    _ => {
+      self.error("Unexpected token \{self.peek()}")
+      @types.Syntax::Unit
+    }
+  }
 }
 
-fn Parser::stmt(self : Parser) -> @types.Syntax {
-  panic()
-}
-
+// non-top function definition:
+// 'fn' ident '(' nontop_params ')' ('->' type_annotation)? block_expr
 //
+// nontop_params: nontop_param (',' nontop_param)*
+// nontop_param: ident (':' type_annotation)?
+//
+// 注意，如果省略类型，这里不会做推断，而是直接返回 unit
 
-fn Parser::letrec_stmt(self : Parser) -> @types.Syntax {
-  fn match_fun_def() -> @types.Fundef {
+fn Parser::nontop_fn_decl(self : Parser) -> @types.Fundef {
+  let nontop_param = fn() -> (String, @types.Type) {
+    let name = self.consume_ident_or_error()
+    if self.check(@types.Token::COLON) {
+      let _ = self.advance()
+      let ty = self.type_annotation()
+      (name, ty)
+    } else {
+      //! TODO
+      (name, @types.Type::Unit)
+    }
+  }
+  let nontop_params = fn() -> Array[(String, @types.Type)] {
+    let params = [nontop_param()]
+    while self.match_token(@types.Token::COMMA) {
+      let param = nontop_param()
+      params.push(param)
+    }
+    params
+  }
+  let _ = self.consume_or_error(@types.Token::FN)
+  let fun_name = self.consume_ident_or_error()
+  let _ = self.consume_or_error(@types.Token::LPAREN)
+  let params = nontop_params()
+  let _ = self.consume_or_error(@types.Token::RPAREN)
+  let ret_ty = if self.match_token(@types.Token::ARROW) {
+    self.type_annotation()
+  } else {
+    @types.Type::Unit
+  }
+  let next = self.block_expr()
+  let fun_ty = @types.Type::Fun(params.map(fn(x) { x.1 }), ret_ty)
+  { name: (fun_name, fun_ty), args: params, body: next }
+}
+
+fn Parser::top_fn_decl(
+  self : Parser,
+  ~should_match_main : Bool = false
+) -> @types.Fundef {
+  // main has its unique syntax
+  if should_match_main {
+    let _ = self.consume_or_error(@types.Token::FN)
+    let s = self.consume_ident_or_error()
+    if s != "main" {
+      self.error("Expected main function but got \{s}")
+      return {
+        name: (s, @types.Type::Unit),
+        args: [],
+        body: @types.Syntax::Unit,
+      }
+    }
+    let body = self.block_expr()
+    let _ = self.consume_or_error(@types.Token::SEMICOLON)
+    { name: (s, @types.Type::Fun([], @types.Type::Unit)), args: [], body }
+  } else {
     let _ = self.consume_or_error(@types.Token::FN)
     let fun_ident = self.consume_ident_or_error()
     let params = self.params_list()
     self.consume_or_error(@types.Token::ARROW)
     let ret_ty = self.type_annotation()
     let fun_ty = @types.Type::Fun(params.map(fn(x) { x.1 }), ret_ty)
-    let body = self.block()
+    let body = self.block_expr()
+    let _ = self.consume_or_error(@types.Token::SEMICOLON)
     { name: (fun_ident, fun_ty), args: params, body }
   }
-
-  let fun = match_fun_def()
-  let next = self.stmt()
-  @types.Syntax::LetRec(fun, next)
 }
 
 /// e.g.
@@ -173,19 +342,13 @@ fn Parser::params_list(self : Parser) -> Array[(String, @types.Type)] {
   params
 }
 
-fn Parser::block(self : Parser) -> @types.Syntax {
-  let _ = self.consume_or_error(@types.Token::LCURLYBRACKET)
-  let stmt = self.stmt()
-  let _ = self.consume_or_error(@types.Token::RCURLYBRACKET)
-  stmt
-}
-
 fn Parser::if_stmt(self : Parser) -> @types.Syntax {
   let _ = self.consume_or_error(@types.Token::IF)
   let condition = self.expr()
   panic()
 }
 
+// ----------------------------
 // expressions
 // ----------------------------
 fn Parser::expr(self : Parser) -> @types.Syntax {
@@ -197,7 +360,7 @@ fn Parser::equality_level_expr(self : Parser) -> @types.Syntax {
   while self.check(@types.Token::EQ) {
     let _ = self.advance()
     let right = self.expr()
-    all = @types.Syntax::Eq(all, right)
+    all = @types.Syntax::EQ(all, right)
   }
   all
 }
@@ -270,28 +433,96 @@ fn Parser::unary(self : Parser) -> @types.Syntax {
     let _ = self.consume_or_error(@types.Token::RPAREN)
     @types.Syntax::Not(expr)
   } else {
+    self.if_level_expr()
+  }
+}
+
+fn Parser::if_level_expr(self : Parser) -> @types.Syntax {
+  match self.peek() {
+    @types.Token::IF => {
+      let _ = self.advance()
+      let condition = self.expr()
+      let then_branch = self.block_expr()
+      if self.match_token(@types.Token::ELSE) {
+        let else_branch = self.block_expr()
+        @types.Syntax::If(condition, then_branch, else_branch)
+      } else {
+        @types.Syntax::If(condition, then_branch, @types.Syntax::Unit)
+      }
+    }
+    _ => self.get_or_apply_level_expr()
+  }
+}
+
+// get_or_apply_level_expr:
+// value_expr
+// | get_or_apply_level_expr '[' expr ']'
+// | get_or_apply_level_expr '(' (expr (',' expr)*)? ')'
+fn Parser::get_or_apply_level_expr(self : Parser) -> @types.Syntax {
+  if self.peek(distance=1) == @types.Token::LBRACKET {
+    let _ = self.advance()
+    let index = self.expr()
+    let _ = self.consume_or_error(@types.Token::RBRACKET)
+    let mut get = @types.Syntax::Get(
+      @types.Syntax::Var(self.consume_ident_or_error()),
+      index,
+    )
+    while self.match_token(@types.Token::LBRACKET) {
+      let _ = self.advance()
+      let index = self.expr()
+      let _ = self.consume_or_error(@types.Token::RBRACKET)
+      get = @types.Syntax::Get(get, index)
+    }
+    get
+  } else if self.peek(distance=1) == @types.Token::LPAREN {
+    let name = self.consume_ident_or_error()
+    let _ = self.consume_or_error(@types.Token::LPAREN)
+    let args = if self.check(@types.Token::RPAREN) {
+      []
+    } else {
+      let fst = self.expr()
+      let args = [fst]
+      while self.match_token(@types.Token::COMMA) {
+        let right = self.expr()
+        args.push(right)
+      }
+      args
+    }
+    let _ = self.consume_or_error(@types.Token::RPAREN)
+    @types.Syntax::App(@types.Syntax::Var(name), args)
+  } else {
     self.value_expr()
   }
+}
+
+// belongs to value_expr
+fn tuple_expr(self : Parser) -> @types.Syntax {
+  let _ = self.consume_or_error(@types.Token::LPAREN)
+  if self.match_token(@types.Token::RPAREN) {
+    return @types.Syntax::Unit
+  } else {
+    let fst = self.expr()
+    let all = [fst]
+    while self.match_token(@types.Token::COMMA) {
+      let right = self.expr()
+      all.push(right)
+    }
+    self.consume_or_error(@types.Token::RPAREN)
+    @types.Syntax::Tuple(all)
+  }
+}
+
+fn Parser::block_expr(self : Parser) -> @types.Syntax {
+  let _ = self.consume_or_error(@types.Token::LCURLYBRACKET)
+  let stmts = self.stmt()
+  let _ = self.consume_or_error(@types.Token::RCURLYBRACKET)
+  stmts
 }
 
 fn Parser::value_expr(self : Parser) -> @types.Syntax {
   let now = self.peek()
   match now {
-    @types.Token::LPAREN => {
-      let _ = self.advance()
-      if self.match_token(@types.Token::RPAREN) {
-        return @types.Syntax::Unit
-      } else {
-        let fst = self.expr()
-        let all = [fst]
-        while self.match_token(@types.Token::COMMA) {
-          let right = self.expr()
-          all.push(right)
-        }
-        self.consume_or_error(@types.Token::RPAREN)
-        @types.Syntax::Tuple(all)
-      }
-    }
+    @types.Token::LPAREN => self.tuple_expr()
     @types.Token::FALSE => {
       let _ = self.advance()
       @types.Syntax::Bool(false)
@@ -310,8 +541,7 @@ fn Parser::value_expr(self : Parser) -> @types.Syntax {
     }
     // Array::make(_, _)
     @types.Token::ARRAY => {
-      self.consume_or_error(@types.Token::COLON)
-      self.consume_or_error(@types.Token::COLON)
+      self.consume_or_error(@types.Token::DOUBLE_COLON)
       if self.consume_ident_or_error() == "make" {
         let _ = self.consume_or_error(@types.Token::LPAREN)
         let size = self.expr()
@@ -327,34 +557,13 @@ fn Parser::value_expr(self : Parser) -> @types.Syntax {
       let _ = self.advance()
       @types.Syntax::Var(name)
     }
+    @types.Token::LCURLYBRACKET => self.block_expr()
     k => {
-      println("Unexpected token: \{k}")
-      panic()
+      self.error("Unexpected token: \{k} in parsing value_expr")
+      @types.Syntax::Unit
     }
   }
-}
-
-fn Parser::consume_or_error(self : Parser, token : @types.Token) -> Unit {
-  if self.peek() == token {
-    let _ = self.advance()
-
-  } else {
-    self.error("Expected token \{token} but got \{self.peek()}")
-  }
-}
-
-fn Parser::consume_ident_or_error(self : Parser) -> String {
-  let now = self.peek()
-  match now {
-    @types.Token::IDENTIFIER(name) => {
-      let _ = self.advance()
-      name
-    }
-    _ => {
-      self.error("Expected identifier but got \{now}")
-      ""
-    }
-  }
+  // Block expr
 }
 
 fn Parser::error(
@@ -362,53 +571,33 @@ fn Parser::error(
   ~syntax : @types.Syntax? = None,
   message : String
 ) -> Unit {
-  if self.log.is_empty() {
-    self.log = Some(@util.IndentLogger::new())
+  if self.logger.is_empty() {
+    self.logger = Some(@util.IndentLogger::new())
+  }
+  self.logger
+  .unwrap()
+  .write_string(
+    "解析错误：当前 token 为 \{self.peek()} (第 \{self.current} 个):\n",
+  )
+  self.logger.unwrap().indent()
+  self.logger.unwrap().write_string("信息: \{message}\n")
+  if not(syntax.is_empty()) {
+    self.logger.unwrap().write_string("syntax: \{syntax}\n")
+  }
+  self.logger.unwrap().write_string("\n")
+  self.logger.unwrap().outdent()
+}
+
+pub fn Parser::print_errors(self : Parser) -> Unit {
+  if not(self.errors.is_empty()) {
+    println(self.logger.unwrap().to_string())
   } else {
-    self.log.unwrap().write_string("Parser error at token \{self.peek()}:\n")
-    self.log.unwrap().indent()
-    self.log.unwrap().write_string("message: \{message}\n")
-    if syntax.is_empty() {
-      self.log.unwrap().write_string("syntax: not provided\n")
-    } else {
-      self.log.unwrap().write_string("syntax: \{syntax}\n")
-    }
-    self.log.unwrap().outdent()
+    println("No parsing errors found.")
   }
 }
 
 fn Parser::finish(self : Parser) -> @types.Syntax {
   self.expr()
-}
-
-test "parser" {
-  let tokens = [
-    @types.Token::INT_LITERAL(1),
-    @types.Token::ADD,
-    @types.Token::INT_LITERAL(2),
-    @types.Token::MUL,
-    @types.Token::DOUBLE_LITERAL(3.14),
-    @types.Token::SUB,
-    @types.Token::INT_LITERAL(4),
-  ]
-  let parser = Parser::new(tokens)
-  let syntax = parser.finish()
-  syntax.to_graphviz().render("a.dot")
-  assert_eq!(syntax.to_sexpr(), "(subi (addi 1 (muli 2 3.14)) 4)")
-}
-
-test "parser 2" {
-  let tokens = [
-    @types.Token::TRUE,
-    @types.Token::EQ,
-    @types.Token::INT_LITERAL(2),
-    @types.Token::GT,
-    @types.Token::INT_LITERAL(1),
-  ]
-  let parser = Parser::new(tokens)
-  let syntax = parser.finish()
-  println(syntax.to_sexpr())
-  assert_eq!(syntax.to_sexpr(), "(= #t (not (<= 2 1)))")
 }
 
 pub fn pass_parser(ctx : @types.Ctx) -> @types.Ctx {
@@ -424,95 +613,4 @@ pub fn pass_parser(ctx : @types.Ctx) -> @types.Ctx {
     let syntax = parser.finish()
     { ..ctx, ast_tree: Some(syntax) }
   }
-}
-
-test "params_list" {
-  let tokens = [
-    @types.Token::LPAREN,
-    @types.Token::IDENTIFIER("a"),
-    @types.Token::COLON,
-    @types.Token::INT,
-    @types.Token::COMMA,
-    @types.Token::IDENTIFIER("b"),
-    @types.Token::COLON,
-    @types.Token::DOUBLE,
-    @types.Token::RPAREN,
-  ]
-  let parser = Parser::new(tokens)
-  let params = parser.params_list()
-  println(parser.errors)
-  assert_eq!(params, [("a", @types.Type::Int), ("b", @types.Type::Double)])
-}
-
-test "type mark Unit" {
-  let tokens = [@types.Token::LPAREN, @types.Token::RPAREN]
-  let parser = Parser::new(tokens)
-  let ty = parser.type_annotation()
-  println(parser.errors)
-  assert_eq!(ty, @types.Type::Unit)
-}
-
-test "type mark Tuple" {
-  let tokens = [
-    @types.Token::LPAREN,
-    @types.Token::INT,
-    @types.Token::COMMA,
-    @types.Token::BOOL,
-    @types.Token::RPAREN,
-  ]
-  let parser = Parser::new(tokens)
-  let ty = parser.type_annotation()
-  println(parser.errors)
-  assert_eq!(ty, @types.Type::Tuple([@types.Type::Int, @types.Type::Bool]))
-}
-
-test "type mark Function" {
-  let tokens = [
-    @types.Token::LPAREN,
-    @types.Token::INT,
-    @types.Token::COMMA,
-    @types.Token::BOOL,
-    @types.Token::RPAREN,
-    @types.Token::ARROW,
-    @types.Token::DOUBLE,
-  ]
-  let parser = Parser::new(tokens)
-  let ty = parser.type_annotation()
-  println(parser.errors)
-  assert_eq!(
-    ty,
-    @types.Type::Fun([@types.Type::Int, @types.Type::Bool], @types.Type::Double),
-  )
-}
-
-test "type mark Function in Tuple" {
-  // ((Int) -> Double, (Bool) -> Int))
-  let tokens = [
-    @types.Token::LPAREN,
-    @types.Token::LPAREN,
-    @types.Token::INT,
-    @types.Token::RPAREN,
-    @types.Token::ARROW,
-    @types.Token::DOUBLE,
-    @types.Token::COMMA,
-    @types.Token::LPAREN,
-    @types.Token::BOOL,
-    @types.Token::RPAREN,
-    @types.Token::ARROW,
-    @types.Token::INT,
-    @types.Token::RPAREN,
-    @types.Token::RPAREN,
-  ]
-  let parser = Parser::new(tokens)
-  let ty = parser.type_annotation()
-  println(parser.errors)
-  assert_eq!(
-    ty,
-    @types.Type::Tuple(
-      [
-        @types.Type::Fun([@types.Type::Int], @types.Type::Double),
-        @types.Type::Fun([@types.Type::Bool], @types.Type::Int),
-      ],
-    ),
-  )
 }

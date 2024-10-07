@@ -70,7 +70,7 @@ struct Scanner {
   mut logger : @util.IndentLogger
 }
 
-fn Scanner::new(source : String, ~logger? : @util.IndentLogger) -> Scanner {
+pub fn Scanner::new(source : String, ~logger? : @util.IndentLogger) -> Scanner {
   {
     source,
     tokens: Array::new(),
@@ -178,7 +178,12 @@ fn Scanner::scan_token(self : Scanner) -> Unit {
     ']' => self.add(@types.Token::RBRACKET)
     '{' => self.add(@types.Token::LCURLYBRACKET)
     '}' => self.add(@types.Token::RCURLYBRACKET)
-    ':' => self.add(@types.Token::COLON)
+    ':' =>
+      if self.match_char(':') {
+        self.add(@types.Token::DOUBLE_COLON)
+      } else {
+        self.add(@types.Token::COLON)
+      }
     ';' => self.add(@types.Token::SEMICOLON)
     ',' => self.add(@types.Token::COMMA)
     '.' => self.add(@types.Token::DOT)
@@ -232,12 +237,34 @@ fn Scanner::scan_token(self : Scanner) -> Unit {
   }
 }
 
-fn Scanner::scan_tokens(self : Scanner) -> Array[@types.Token] {
+pub fn Scanner::scan_tokens(self : Scanner) -> Array[@types.Token] {
   while not(self.is_at_end()) {
     self.start = self.current
     self.scan_token()
   }
   return self.tokens
+}
+
+test "tokenize double colon" {
+  let scanner = Scanner::new("let xs = Array::make(a, b);")
+  let tokens = scanner.scan_tokens()
+  assert_eq!(
+    tokens,
+    [
+      @types.Token::LET,
+      @types.Token::IDENTIFIER("xs"),
+      @types.Token::ASSIGN,
+      @types.Token::ARRAY,
+      @types.Token::DOUBLE_COLON,
+      @types.Token::IDENTIFIER("make"),
+      @types.Token::LPAREN,
+      @types.Token::IDENTIFIER("a"),
+      @types.Token::COMMA,
+      @types.Token::IDENTIFIER("b"),
+      @types.Token::RPAREN,
+      @types.Token::SEMICOLON,
+    ],
+  )
 }
 
 test "tokenize double literal and integer literal" {
@@ -335,28 +362,6 @@ test "tokenize >= > <= <" {
       @types.Token::LCURLYBRACKET,
       @types.Token::RCURLYBRACKET,
       @types.Token::RCURLYBRACKET,
-    ],
-  )
-}
-
-test "tokenize array" {
-  let scanner = Scanner::new("let xs = Array::make(a, b)")
-  let tokens = scanner.scan_tokens()
-  assert_eq!(
-    tokens,
-    [
-      @types.Token::LET,
-      @types.Token::IDENTIFIER("xs"),
-      @types.Token::ASSIGN,
-      @types.Token::ARRAY,
-      @types.Token::COLON,
-      @types.Token::COLON,
-      @types.Token::IDENTIFIER("make"),
-      @types.Token::LPAREN,
-      @types.Token::IDENTIFIER("a"),
-      @types.Token::COMMA,
-      @types.Token::IDENTIFIER("b"),
-      @types.Token::RPAREN,
     ],
   )
 }

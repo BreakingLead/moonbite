@@ -90,7 +90,7 @@ fn main_w() -> Unit {
   // To KNF
   let external_fns = externals()
   let knf_env = @knf.KnfEnv::new(external_fns)
-  let knf = knf_env.to_knf(typechecked)
+  let knf = knf_env.syntax_to_knf(typechecked)
   if print_knf.val {
     println("Initial KNF:")
     println(knf.to_pretty_print())

@@ -2,6 +2,8 @@
 
 一个 MiniMoonbit 的编译器。
 
+为什么这么艰难？因为我还没有写完！
+
 | Date   | Topic                                              | Slides | Video | Example code | Recommended reading |
 | ------ | -------------------------------------------------- | ------ | ----- | ------------ | ------------------- |
 | Part 0 | Introduction to language design and implementation |        |       |              |

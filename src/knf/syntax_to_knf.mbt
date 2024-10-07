@@ -21,6 +21,6 @@ fn KnfEnv::new_named_temp(self : KnfEnv, name : Name) -> Name {
   { ..name, slot: counter }
 }
 
-pub fn KnfEnv::to_knf(self : KnfEnv, s : @types.Syntax) -> Knf { // !Failure
+pub fn KnfEnv::syntax_to_knf(self : KnfEnv, s : @types.Syntax) -> Knf { // !Failure
   abort("todo")
 }

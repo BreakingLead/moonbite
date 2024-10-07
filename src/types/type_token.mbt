@@ -26,6 +26,7 @@ pub enum Token {
   LT // new
   GE // new
   GT // new
+  DOUBLE_COLON //new
   LPAREN
   RPAREN
   LBRACKET
